@@ -11,6 +11,18 @@ Rcpp::Rostream<true>&  Rcpp::Rcout = Rcpp::Rcpp_cout_get();
 Rcpp::Rostream<false>& Rcpp::Rcerr = Rcpp::Rcpp_cerr_get();
 #endif
 
+// OP
+List OP(std::vector<double> data, double penalty);
+RcppExport SEXP _svpChange_OP(SEXP dataSEXP, SEXP penaltySEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< std::vector<double> >::type data(dataSEXP);
+    Rcpp::traits::input_parameter< double >::type penalty(penaltySEXP);
+    rcpp_result_gen = Rcpp::wrap(OP(data, penalty));
+    return rcpp_result_gen;
+END_RCPP
+}
 // svp
 List svp(Rcpp::NumericVector data, double gamma, Function test, bool all_full_validity);
 RcppExport SEXP _svpChange_svp(SEXP dataSEXP, SEXP gammaSEXP, SEXP testSEXP, SEXP all_full_validitySEXP) {
@@ -37,6 +49,7 @@ END_RCPP
 }
 
 static const R_CallMethodDef CallEntries[] = {
+    {"_svpChange_OP", (DL_FUNC) &_svpChange_OP, 2},
     {"_svpChange_svp", (DL_FUNC) &_svpChange_svp, 4},
     {"_svpChange_test0", (DL_FUNC) &_svpChange_test0, 0},
     {NULL, NULL, 0}
