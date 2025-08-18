@@ -8,21 +8,23 @@ using namespace Rcpp;
 //' Optimal Partitioning algorithm using PELT
 //'
 //' @title Optimal Partitioning using PELT
+//'
 //' @description This function implements the OP algorithm using PELT of a given vector `data` with a given penalty term.
-//' It finds the optimal changepoints that minimize the cost function using dynamic programming.
+//' It finds the optimal change points that minimize the cost function using dynamic programming.
 //'
 //' @param data A numeric vector representing the data to segment.
 //' @param penalty A double value representing the penalty term for adding a new segment.
 //'
-//' @return A list with
-//' (1) the changepoint elements (each last index of each segment in \code{changepoints}),
-//' (2) a vector \code{nb} saving the number of non-pruned elements at each iteration,
-//' (3) a vector \code{lastIndexSet} containing the non-pruned indices at the end of the algorithm,
-//' (4) a vector \code{costQ} saving the optimal cost at each time step.
+//' @return A list with the following elements:
+//' \itemize{
+//'   \item \code{changepoints}: the last index of each segment,
+//'   \item \code{nb}: a vector saving the number of non-pruned elements at each iteration,
+//'   \item \code{lastIndexSet}: a vector containing the non-pruned indices at the end of the algorithm,
+//'   \item \code{costQ}: a vector saving the optimal cost at each time step.
 //'
 //' @examples
 //' n <- 1000
-//' data <- rep(c(0, 5, 2.5, 7), each = n) + rnorm(4 * n)
+//' data <- rep(c(0, 1, -0.5, 0), each = n) + rnorm(4 * n)
 //' penalty <- 2 * log(length(data))
 //' resPELT <- PELT(data, penalty)
 //'
@@ -56,27 +58,24 @@ List PELT(std::vector<double> data, double penalty)
   // MAIN LOOP
   //
   double best_cost = std::numeric_limits<double>::infinity();
-  double sum_x;
-  double sum_x2;
-  double gaussian_cost;
+  std::vector<size_t> newP;
   size_t t1;
   size_t arg_min;
   size_t s;
 
+  std::vector<double> costs;  // declare once outside the loop
+
   for (size_t t = 0; t < n; t++)
   {
     t1 = t + 1;
-    std::vector<double> costs(P.size(), std::numeric_limits<double>::infinity());
+    costs.assign(P.size(), std::numeric_limits<double>::infinity());
     best_cost = std::numeric_limits<double>::infinity();
     arg_min = 1;
 
     for (size_t i = 0; i < P.size(); i++)
     {
       s = P[i];
-      sum_x = S1[t1] - S1[s];
-      sum_x2 = S2[t1] - S2[s];
-      gaussian_cost = sum_x2 - (sum_x * sum_x) / (t1 - s);
-      costs[i] = Q[s] + gaussian_cost + penalty;
+      costs[i] = Q[s] + (S2[t1] - S2[s]) - ((S1[t1] - S1[s]) * (S1[t1] - S1[s])) / (t1 - s) + penalty;
       if (costs[i] < best_cost)
       {
         best_cost = costs[i];
@@ -90,14 +89,17 @@ List PELT(std::vector<double> data, double penalty)
     //
     // PELT PRUNING
     //
-    std::vector<size_t> newP;
+    newP.clear();  // reset contents but keep capacity
     for (size_t i = 0; i < P.size(); i++)
     {
-      size_t s = P[i];
-      if (costs[i] <= Q[t1] + penalty) newP.push_back(s);
+      s = P[i];
+      if (costs[i] <= Q[t1] + penalty)
+      {
+        newP.push_back(s);
+      }
     }
     newP.push_back(t1);
-    P = newP;
+    P.swap(newP);
   }
 
   //

@@ -27,21 +27,23 @@ OP <- function(data, penalty) {
 #' Optimal Partitioning algorithm using PELT
 #'
 #' @title Optimal Partitioning using PELT
+#'
 #' @description This function implements the OP algorithm using PELT of a given vector `data` with a given penalty term.
-#' It finds the optimal changepoints that minimize the cost function using dynamic programming.
+#' It finds the optimal change points that minimize the cost function using dynamic programming.
 #'
 #' @param data A numeric vector representing the data to segment.
 #' @param penalty A double value representing the penalty term for adding a new segment.
 #'
-#' @return A list with
-#' (1) the changepoint elements (each last index of each segment in \code{changepoints}),
-#' (2) a vector \code{nb} saving the number of non-pruned elements at each iteration,
-#' (3) a vector \code{lastIndexSet} containing the non-pruned indices at the end of the algorithm,
-#' (4) a vector \code{costQ} saving the optimal cost at each time step.
+#' @return A list with the following elements:
+#' \itemize{
+#'   \item \code{changepoints}: the last index of each segment,
+#'   \item \code{nb}: a vector saving the number of non-pruned elements at each iteration,
+#'   \item \code{lastIndexSet}: a vector containing the non-pruned indices at the end of the algorithm,
+#'   \item \code{costQ}: a vector saving the optimal cost at each time step.
 #'
 #' @examples
 #' n <- 1000
-#' data <- rep(c(0, 5, 2.5, 7), each = n) + rnorm(4 * n)
+#' data <- rep(c(0, 1, -0.5, 0), each = n) + rnorm(4 * n)
 #' penalty <- 2 * log(length(data))
 #' resPELT <- PELT(data, penalty)
 #'
