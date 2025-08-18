@@ -1,3 +1,7 @@
 exportPattern("^[[:alpha:]]+")
 importFrom(Rcpp, evalCpp)
 useDynLib(svpChange, .registration = TRUE)
+
+importFrom("stats", "rbinom", "rexp", "rgeom", "rnbinom", "rnorm", "rpois")
+
+importFrom(methods, new)

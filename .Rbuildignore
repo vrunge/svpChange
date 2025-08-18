@@ -1,2 +1,5 @@
 ^.*\.Rproj$
 ^\.Rproj\.user$
+simulations
+README.Rmd
+^LICENSE\.md$

@@ -1,16 +1,33 @@
 [
     {
-        "file": "/Users/vrunge/Dropbox/Mon Mac (pc-20.home)/Desktop/Rpackages/svpChange/src/rcpp_hello.cpp",
-        "file_last_write": 1755509003.0,
+        "file": "/Users/vrunge/Dropbox/Mon Mac (pc-20.home)/Desktop/Rpackages/svpChange/src/svp.cpp",
+        "file_last_write": 1755512331.0,
         "definitions": [
             {
-                "usr": "c:@F@rcpp_hello#",
+                "usr": "c:@F@svp#I#d#I#b#",
                 "kind": 6,
                 "parent_name": "",
-                "name": "rcpp_hello",
-                "file": "/Users/vrunge/Dropbox/Mon Mac (pc-20.home)/Desktop/Rpackages/svpChange/src/rcpp_hello.cpp",
-                "line": 18,
+                "name": "svp(Rcpp::NumericVector, double, Function, bool)",
+                "file": "/Users/vrunge/Dropbox/Mon Mac (pc-20.home)/Desktop/Rpackages/svpChange/src/svp.cpp",
+                "line": 36,
                 "column": 6,
+                "hidden": false
+            }
+        ],
+        "hidden": false
+    },
+    {
+        "file": "/Users/vrunge/Dropbox/Mon Mac (pc-20.home)/Desktop/Rpackages/svpChange/src/test0.cpp",
+        "file_last_write": 1755512104.0,
+        "definitions": [
+            {
+                "usr": "c:@F@test0#",
+                "kind": 6,
+                "parent_name": "",
+                "name": "test0",
+                "file": "/Users/vrunge/Dropbox/Mon Mac (pc-20.home)/Desktop/Rpackages/svpChange/src/test0.cpp",
+                "line": 14,
+                "column": 5,
                 "hidden": false
             }
         ],
