@@ -18,7 +18,8 @@ Suggests:
     devtools,
     testthat (>= 3.0.0),
     rmarkdown,
-    ggplot2
+    ggplot2,
+    FOCuS
 LinkingTo: Rcpp, RcppArmadillo
 RoxygenNote: 7.3.2
 Config/testthat/edition: 3

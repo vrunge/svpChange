@@ -5,11 +5,11 @@ library(dust)
 n <- 1000
 gap <- 1
 chpts = c(0.1,0.3,0.4,0.45,0.55,0.7,0.75,0.95,1)*n
-data <- dataGenerator_1D(chpts = chpts,
-                         parameters = c(0,gap,0,gap,0,gap,0,gap,0),
-                         sdNoise = 1)
+data <- tsGenerator(chpts = chpts,
+                    parameters = c(0,gap,0,gap,0,gap,0,gap,0),
+                    sdNoise = 1)
 plot(data)
-penalty <- 2 * log(length(data))
+penalty <- 2 * log(n)
 
 ### OP
 OPres <- OP(data, penalty)
@@ -33,15 +33,13 @@ plot(2*(DUSTres$costQ + cumsum(data^2)/2) - OPres$costQ)
 
 
 
-
-
-
-
-
+################################################################################
+####
+#### SIMULATIONS
+####
 
 
 library(changepoints)
-library(svpChange)
 library(microbenchmark)
 
 
@@ -51,14 +49,17 @@ data <- tsGenerator(n, sdNoise = 1)
 res <- PELT(data, penalty)
 res$changepoints
 
+####
+#### MORE SIMULATIONS
+####
+
 
 library(changepoints)
-devtools::install_github("vrunge/svpChange")
 library(svpChange)
 library(microbenchmark)
 
 n <-  10^5
-penalty <- 2 * log(n)/1
+penalty <- 2 * log(n)/3
 nrep <- 10L
 
 # Pre-generate data
@@ -69,7 +70,7 @@ counter1 <- 0
 counter2 <- 0
 
 bench <- microbenchmark(
-  PELT_R = {
+  PELT_Runge = {
     counter1 <<- counter1 + 1
     PELT(datasets[[counter1]], penalty)
   },

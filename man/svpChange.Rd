@@ -10,7 +10,7 @@ The **svpChange** package provides tools for detecting change points using the s
 }
 \section{Functions}{
 
-- \code{\link{test0}}: returns 3.
+- \code{\link{svp0}}:
 - More functions here.
 }
 

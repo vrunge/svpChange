@@ -35,27 +35,17 @@ BEGIN_RCPP
     return rcpp_result_gen;
 END_RCPP
 }
-// svp
-List svp(Rcpp::NumericVector data, double gamma, Function test, bool all_full_validity);
-RcppExport SEXP _svpChange_svp(SEXP dataSEXP, SEXP gammaSEXP, SEXP testSEXP, SEXP all_full_validitySEXP) {
+// svp0
+List svp0(std::vector<double> data, double gamma, Function test, bool all_full_validity);
+RcppExport SEXP _svpChange_svp0(SEXP dataSEXP, SEXP gammaSEXP, SEXP testSEXP, SEXP all_full_validitySEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
     Rcpp::RNGScope rcpp_rngScope_gen;
-    Rcpp::traits::input_parameter< Rcpp::NumericVector >::type data(dataSEXP);
+    Rcpp::traits::input_parameter< std::vector<double> >::type data(dataSEXP);
     Rcpp::traits::input_parameter< double >::type gamma(gammaSEXP);
     Rcpp::traits::input_parameter< Function >::type test(testSEXP);
     Rcpp::traits::input_parameter< bool >::type all_full_validity(all_full_validitySEXP);
-    rcpp_result_gen = Rcpp::wrap(svp(data, gamma, test, all_full_validity));
-    return rcpp_result_gen;
-END_RCPP
-}
-// test0
-int test0();
-RcppExport SEXP _svpChange_test0() {
-BEGIN_RCPP
-    Rcpp::RObject rcpp_result_gen;
-    Rcpp::RNGScope rcpp_rngScope_gen;
-    rcpp_result_gen = Rcpp::wrap(test0());
+    rcpp_result_gen = Rcpp::wrap(svp0(data, gamma, test, all_full_validity));
     return rcpp_result_gen;
 END_RCPP
 }
@@ -63,8 +53,7 @@ END_RCPP
 static const R_CallMethodDef CallEntries[] = {
     {"_svpChange_OP", (DL_FUNC) &_svpChange_OP, 2},
     {"_svpChange_PELT", (DL_FUNC) &_svpChange_PELT, 2},
-    {"_svpChange_svp", (DL_FUNC) &_svpChange_svp, 4},
-    {"_svpChange_test0", (DL_FUNC) &_svpChange_test0, 0},
+    {"_svpChange_svp0", (DL_FUNC) &_svpChange_svp0, 4},
     {NULL, NULL, 0}
 };
 

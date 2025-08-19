@@ -1,4 +1,5 @@
 #include <Rcpp.h>
+#include <vector>
 
 using namespace Rcpp;
 
@@ -13,32 +14,32 @@ using namespace Rcpp;
 //' @param all_full_validity Logical. If TRUE (default), the algorithm applies *segment-wise validation*:
 //' at each time step, it tests whether the candidate segment \code{data[(s+1):t]} is valid using the
 //' user-defined function \code{test}. If the segment fails the test, the candidate \code{s} is removed
-//' (pruned) from the set of possible change points. This accelerates computation by avoiding invalid
+//' (pruned) from the set of possible changepoints. This accelerates computation by avoiding invalid
 //' segment extensions. If FALSE, the algorithm skips this validation and considers all candidate
 //' segments without checking their validity (which can be faster but may return invalid segments).
 //'
-//' @return A list with the following components:
+//' @return A list with the following components :
 //' \describe{
-//'   \item{changepoints}{Integer vector indicating the ending index of each segment (i.e., positions of change points).}
+//'   \item{changepoints}{Integer vector indicating the ending index of each segment (i.e., positions of changepoints).}
 //'   \item{nb}{Integer vector of length \code{length(data)}. At each position \code{t}, it records the number of candidates tested.}
 //'   \item{costQ}{Numeric vector of length \code{length(data)}. Quadratic cost value at each time step.}
 //'   \item{R}{A matrix of dimension \code{(length(data)+1) x 3} containing, for each time step :
 //'     \describe{
 //'       \item{Q}{cumulative cost}
 //'       \item{K}{number of segments}
-//'       \item{s}{the last change point (where the last segment starts)}
+//'       \item{s}{previous changepoint}
 //'     }
 //'   }
 //' }
 //'
 //' @export
 // [[Rcpp::export]]
-List svp(Rcpp::NumericVector data,
-        double gamma,
-        Function test,
-        bool all_full_validity = true)
+List svp0(std::vector<double> data,
+          double gamma,
+          Function test,
+          bool all_full_validity = true)
 {
-  int n = static_cast<int>(data.size());
+  size_t n = data.size();
 
    // Initialization of the R matrix
    NumericMatrix R(n + 1, 3); // Q, K, s
@@ -61,6 +62,9 @@ List svp(Rcpp::NumericVector data,
 
    std::vector<int> INDEX = {0};
 
+
+   bool valid;
+
    for (int t = 1; t <= n; t++)
    {
      double best_Q = R_PosInf;
@@ -73,72 +77,68 @@ List svp(Rcpp::NumericVector data,
        int s = INDEX[k];
        if (s >= t) continue;
 
-       bool valid = true;
-       if (all_full_validity)
-       {
-         NumericVector seg = data[Range(s, t - 1)];
-         valid = as<bool>(test(seg, gamma));
-       }
+      valid = true;
+      if (all_full_validity)
+      {
+        std::vector<double> seg(data.begin() + s, data.begin() + t);
+        valid = as<bool>(test(seg, gamma));
+      }
 
-       if (valid)
-       {
-         double sum_y = cs_y[t] - cs_y[s];
-         double sum_y2 = cs_y2[t] - cs_y2[s];
-         double seg_cost = sum_y2 - (sum_y * sum_y) / (t - s);
-         double candidate_Q = R(s, 0) + seg_cost;
-         int candidate_K = R(s, 1) + 1;
+      if (valid == true)
+      {
+        double candidate_Q = R(s, 0) + (cs_y2[t] - cs_y2[s]) - ((cs_y[t] - cs_y[s]) * (cs_y[t] - cs_y[s])) / (t - s);
+        int candidate_K = R(s, 1) + 1;
 
-         if (candidate_K < best_K || (candidate_K == best_K && candidate_Q < best_Q))
-         {
-           best_Q = candidate_Q;
-           best_K = candidate_K;
-           best_s = s;
-           costQ[t - 1] = best_Q;
-         }
-         new_INDEX.push_back(s);
-       }
-     }
+        if (candidate_K < best_K || (candidate_K == best_K && candidate_Q < best_Q))
+        {
+          best_Q = candidate_Q;
+          best_K = candidate_K;
+          best_s = s;
+          costQ[t - 1] = best_Q;
+        }
+        new_INDEX.push_back(s);
+      }
+    }
 
-     // Pruning step
-     std::vector<int> pruned_INDEX;
-     for (size_t k = 0; k < new_INDEX.size(); ++k)
-     {
-       int s = new_INDEX[k];
-       if (s == t) continue;
+    //
+    // PRUNING PELT
+    //
+    std::vector<int> pruned_INDEX;
+    for (size_t k = 0; k < new_INDEX.size(); ++k)
+    {
+      int s = new_INDEX[k];
+      if (s == t) continue;
 
-       double sum_y = cs_y[t] - cs_y[s];
-       double sum_y2 = cs_y2[t] - cs_y2[s];
-       double seg_cost = sum_y2 - (sum_y * sum_y) / (t - s);
-       double candidate_Q = R(s, 0) + seg_cost;
-       int candidate_K = R(s, 1);
+      double candidate_Q = R(s, 0) + (cs_y2[t] - cs_y2[s]) - ((cs_y[t] - cs_y[s]) * (cs_y[t] - cs_y[s])) / (t - s);
+      int candidate_K = R(s, 1);
 
-       if (!(candidate_Q > best_Q && candidate_K == best_K))
-       {
-         pruned_INDEX.push_back(s);
-       }
-     }
-     pruned_INDEX.push_back(t);
-     INDEX = pruned_INDEX;
-     nb[t - 1] = INDEX.size();
+      if (!(candidate_Q > best_Q && candidate_K == best_K))
+      {
+        pruned_INDEX.push_back(s);
+      }
+    }
+    pruned_INDEX.push_back(t);
+    INDEX = pruned_INDEX;
+    nb[t - 1] = INDEX.size();
 
-     R(t, 0) = best_Q;
-     R(t, 1) = best_K;
-     R(t, 2) = best_s;
-   }
+    R(t, 0) = best_Q;
+    R(t, 1) = best_K;
+    R(t, 2) = best_s;
+  }
 
-   // Reconstruct changepoints
-   IntegerVector changepoints;
-   int t = n;
-   while (t > 0)
-   {
-     changepoints.push_front(t);
-     t = R(t, 2);
-   }
+  // Reconstruct changepoints
+  IntegerVector changepoints;
+  int t = n;
+  while (t > 0)
+  {
+    changepoints.push_front(t);
+    t = R(t, 2);
+  }
 
-   return List::create(
-     _["changepoints"] = changepoints,
-     _["nb"] = nb,
-     _["costQ"] = costQ,
-     _["R"] = R
-   );
+  return List::create(
+    _["changepoints"] = changepoints,
+    _["nb"] = nb,
+    _["costQ"] = costQ,
+    _["R"] = R
+  );
 }

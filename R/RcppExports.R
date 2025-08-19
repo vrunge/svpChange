@@ -63,39 +63,26 @@ PELT <- function(data, penalty) {
 #' @param all_full_validity Logical. If TRUE (default), the algorithm applies *segment-wise validation*:
 #' at each time step, it tests whether the candidate segment \code{data[(s+1):t]} is valid using the
 #' user-defined function \code{test}. If the segment fails the test, the candidate \code{s} is removed
-#' (pruned) from the set of possible change points. This accelerates computation by avoiding invalid
+#' (pruned) from the set of possible changepoints. This accelerates computation by avoiding invalid
 #' segment extensions. If FALSE, the algorithm skips this validation and considers all candidate
 #' segments without checking their validity (which can be faster but may return invalid segments).
 #'
-#' @return A list with the following components:
+#' @return A list with the following components :
 #' \describe{
-#'   \item{changepoints}{Integer vector indicating the ending index of each segment (i.e., positions of change points).}
+#'   \item{changepoints}{Integer vector indicating the ending index of each segment (i.e., positions of changepoints).}
 #'   \item{nb}{Integer vector of length \code{length(data)}. At each position \code{t}, it records the number of candidates tested.}
 #'   \item{costQ}{Numeric vector of length \code{length(data)}. Quadratic cost value at each time step.}
 #'   \item{R}{A matrix of dimension \code{(length(data)+1) x 3} containing, for each time step :
 #'     \describe{
 #'       \item{Q}{cumulative cost}
 #'       \item{K}{number of segments}
-#'       \item{s}{the last change point (where the last segment starts)}
+#'       \item{s}{previous changepoint}
 #'     }
 #'   }
 #' }
 #'
 #' @export
-svp <- function(data, gamma, test, all_full_validity = TRUE) {
-    .Call(`_svpChange_svp`, data, gamma, test, all_full_validity)
-}
-
-#' Test function returning 3
-#'
-#' This is a simple example of an exported C++ function
-#' made available to R.
-#'
-#' @return An integer equal to 3.
-#' @examples
-#' test0()
-#' @export
-test0 <- function() {
-    .Call(`_svpChange_test0`)
+svp0 <- function(data, gamma, test, all_full_validity = TRUE) {
+    .Call(`_svpChange_svp0`, data, gamma, test, all_full_validity)
 }
 
