@@ -31,3 +31,53 @@ PELTres$costQ  - OPres$costQ
 plot(2*(DUSTres$costQ + cumsum(data^2)/2) - OPres$costQ)
 
 
+
+
+
+
+
+
+
+
+
+library(changepoints)
+library(svpChange)
+library(microbenchmark)
+
+
+n <-  10^5
+penalty <- 2 * log(n)/3
+data <- tsGenerator(n, sdNoise = 1)
+res <- PELT(data, penalty)
+res$changepoints
+
+
+library(changepoints)
+devtools::install_github("vrunge/svpChange")
+library(svpChange)
+library(microbenchmark)
+
+n <-  10^5
+penalty <- 2 * log(n)/1
+nrep <- 10L
+
+# Pre-generate data
+datasets <- replicate(nrep, tsGenerator(n, sdNoise = 1), simplify = FALSE)
+
+# External counter
+counter1 <- 0
+counter2 <- 0
+
+bench <- microbenchmark(
+  PELT_R = {
+    counter1 <<- counter1 + 1
+    PELT(datasets[[counter1]], penalty)
+  },
+  PELT_Rcpp = {
+    counter2 <<- counter2 + 1
+    pelt_rcpp(datasets[[counter2]], penalty)
+  },
+  times = nrep
+)
+
+print(bench)

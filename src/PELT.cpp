@@ -21,7 +21,7 @@ using namespace Rcpp;
 //'   \item \code{nb}: a vector saving the number of non-pruned elements at each iteration,
 //'   \item \code{lastIndexSet}: a vector containing the non-pruned indices at the end of the algorithm,
 //'   \item \code{costQ}: a vector saving the optimal cost at each time step.
-//'
+//' }
 //' @examples
 //' n <- 1000
 //' data <- rep(c(0, 1, -0.5, 0), each = n) + rnorm(4 * n)
@@ -37,7 +37,7 @@ List PELT(std::vector<double> data, double penalty)
   // Initialize the costs and the changepoints
   std::vector<double> Q(n + 1, std::numeric_limits<double>::infinity());
   Q[0] = -penalty;
-  std::vector<size_t> last_cp(n + 1, 0);
+  std::vector<size_t> lastChange(n + 1, 0);
   std::vector<size_t> P(1, 0);
   std::vector<size_t> length_P(n);
 
@@ -83,7 +83,7 @@ List PELT(std::vector<double> data, double penalty)
       }
     }
     Q[t1] = best_cost;
-    last_cp[t1] = arg_min;
+    lastChange[t1] = arg_min;
     length_P[t] = P.size();
 
     //
@@ -108,19 +108,31 @@ List PELT(std::vector<double> data, double penalty)
   // Change points reconstruction
   std::vector<int> changepoints;
   size_t i = n;
-  while (last_cp[i] > 0)
+  while (lastChange[i] > 0)
   {
-    changepoints.push_back(last_cp[i]);
-    i = last_cp[i];
+    changepoints.push_back(lastChange[i]);
+    i = lastChange[i];
   }
   std::reverse(changepoints.begin(), changepoints.end());
   changepoints.push_back(n);
 
+  //
+  // Return
+  //
   std::reverse(P.begin(), P.end());
 
   return List::create(
-    Named("changepoints") = wrap(changepoints),
-    Named("lastIndexSet") = wrap(P),
-    Named("nb") = wrap(length_P),
-    Named("costQ") = wrap(std::vector<double>(Q.begin() + 1, Q.end())));
+    Named("changepoints") = changepoints,
+    Named("lastIndexSet") = P,
+    Named("nb") = length_P,
+    Named("costQ") = std::vector<double>(Q.begin() + 1, Q.end()));
 }
+
+
+
+
+
+
+
+
+

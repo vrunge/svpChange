@@ -40,7 +40,7 @@ OP <- function(data, penalty) {
 #'   \item \code{nb}: a vector saving the number of non-pruned elements at each iteration,
 #'   \item \code{lastIndexSet}: a vector containing the non-pruned indices at the end of the algorithm,
 #'   \item \code{costQ}: a vector saving the optimal cost at each time step.
-#'
+#' }
 #' @examples
 #' n <- 1000
 #' data <- rep(c(0, 1, -0.5, 0), each = n) + rnorm(4 * n)
