@@ -106,15 +106,15 @@ List PELT(std::vector<double> data, double penalty)
   // BACKTRACKING
   //
   // Change points reconstruction
-  std::vector<int> changepoints;
+  std::vector<int> optimal_cpts;
   size_t i = n;
   while (lastChange[i] > 0)
   {
-    changepoints.push_back(lastChange[i]);
+    optimal_cpts.push_back(lastChange[i]);
     i = lastChange[i];
   }
-  std::reverse(changepoints.begin(), changepoints.end());
-  changepoints.push_back(n);
+  std::reverse(optimal_cpts.begin(), optimal_cpts.end());
+  optimal_cpts.push_back(n);
 
   //
   // Return
@@ -122,7 +122,7 @@ List PELT(std::vector<double> data, double penalty)
   std::reverse(P.begin(), P.end());
 
   return List::create(
-    Named("changepoints") = changepoints,
+    Named("changepoints") = optimal_cpts,
     Named("lastIndexSet") = P,
     Named("nb") = length_P,
     Named("costQ") = std::vector<double>(Q.begin() + 1, Q.end()));

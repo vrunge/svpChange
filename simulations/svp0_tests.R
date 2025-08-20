@@ -1,9 +1,12 @@
 
+
+devtools::install_github("alexandre-combeau/changepoints")
+livrary(changepoints)
 library(svpChange)
 
 n <- 1000
 gap <- 1
-chpts = c(0.3,0.5,0.7,,1)*n
+chpts = c(0.3,0.5,0.7,1)*n
 data <- tsGenerator(chpts = chpts,
                     parameters = c(0,gap,0,gap),
                     sdNoise = 1)
@@ -18,7 +21,7 @@ OPres$changepoints
 ### SVP0 valid_RANGE
 ### SVP0 valid_RANGE
 plot(data)
-res_svp0 <- svp0(data, gamma = 20, test = valid_RANGE)
+res_svp0 <- svp0(data, gamma = 4, test = valid_RANGE)
 res_svp0$changepoints
 res_svp0$nb
 

@@ -60,7 +60,7 @@ PELT <- function(data, penalty) {
 #' @param data A numeric vector representing the univariate signal to be segmented.
 #' @param gamma A numeric value used as a threshold in the validation function and as a penalty for each segment.
 #' @param test A function of the form `function(data, gamma)` returning TRUE if the segment is valid. Default is `valid_OP`.
-#' @param all_full_validity Logical. If TRUE (default), the algorithm applies *segment-wise validation*:
+#' @param prune_if_unvalid Logical. If TRUE (default), the algorithm applies *segment-wise validation*:
 #' at each time step, it tests whether the candidate segment \code{data[(s+1):t]} is valid using the
 #' user-defined function \code{test}. If the segment fails the test, the candidate \code{s} is removed
 #' (pruned) from the set of possible changepoints. This accelerates computation by avoiding invalid
@@ -71,18 +71,18 @@ PELT <- function(data, penalty) {
 #' \describe{
 #'   \item{changepoints}{Integer vector indicating the ending index of each segment (i.e., positions of changepoints).}
 #'   \item{nb}{Integer vector of length \code{length(data)}. At each position \code{t}, it records the number of candidates tested.}
-#'   \item{costQ}{Numeric vector of length \code{length(data)}. Quadratic cost value at each time step.}
+#'   \item{costQ}{Numeric vector of length \code{length(data)}. Quadratic cost value at each time step. Set to NULL as it is recorded into matrix R}
 #'   \item{R}{A matrix of dimension \code{(length(data)+1) x 3} containing, for each time step :
 #'     \describe{
 #'       \item{Q}{cumulative cost}
-#'       \item{K}{number of segments}
+#'       \item{K}{number of segments in Q}
 #'       \item{s}{previous changepoint}
 #'     }
 #'   }
 #' }
 #'
 #' @export
-svp0 <- function(data, gamma, test, all_full_validity = TRUE) {
-    .Call(`_svpChange_svp0`, data, gamma, test, all_full_validity)
+svp0 <- function(data, gamma, test, prune_if_unvalid = TRUE) {
+    .Call(`_svpChange_svp0`, data, gamma, test, prune_if_unvalid)
 }
 

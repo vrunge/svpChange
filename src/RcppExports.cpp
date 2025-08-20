@@ -36,16 +36,16 @@ BEGIN_RCPP
 END_RCPP
 }
 // svp0
-List svp0(std::vector<double> data, double gamma, Function test, bool all_full_validity);
-RcppExport SEXP _svpChange_svp0(SEXP dataSEXP, SEXP gammaSEXP, SEXP testSEXP, SEXP all_full_validitySEXP) {
+List svp0(std::vector<double> data, double gamma, Function test, bool prune_if_unvalid);
+RcppExport SEXP _svpChange_svp0(SEXP dataSEXP, SEXP gammaSEXP, SEXP testSEXP, SEXP prune_if_unvalidSEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
     Rcpp::RNGScope rcpp_rngScope_gen;
     Rcpp::traits::input_parameter< std::vector<double> >::type data(dataSEXP);
     Rcpp::traits::input_parameter< double >::type gamma(gammaSEXP);
     Rcpp::traits::input_parameter< Function >::type test(testSEXP);
-    Rcpp::traits::input_parameter< bool >::type all_full_validity(all_full_validitySEXP);
-    rcpp_result_gen = Rcpp::wrap(svp0(data, gamma, test, all_full_validity));
+    Rcpp::traits::input_parameter< bool >::type prune_if_unvalid(prune_if_unvalidSEXP);
+    rcpp_result_gen = Rcpp::wrap(svp0(data, gamma, test, prune_if_unvalid));
     return rcpp_result_gen;
 END_RCPP
 }
