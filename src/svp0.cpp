@@ -2,7 +2,7 @@
 #include <vector>
 #include <limits>
 #include <algorithm>
-using namespace std;
+//using namespace std;
 using namespace Rcpp;
 
 //' Smallest Valid Partitioning with Validation and Pruning using Rcpp
@@ -141,8 +141,9 @@ List svp0(std::vector<double> data,
         candidate_Q = R(s, 0) + (S2[t] - S2[s]) - (S1[t] - S1[s]) * (S1[t] - S1[s]) / (t - s);
         candidate_K = R(s, 1);
 
-        std::cout<< ((candidate_Q <= best_Q) || (candidate_K != best_K)) << std::endl;
-        if (((candidate_Q <= best_Q) || (candidate_K != best_K)))
+        //std::cout<< ((candidate_Q <= best_Q) || (candidate_K != best_K)) << std::endl;
+        //if (((candidate_Q <= best_Q) || (candidate_K != best_K)))
+        if (!((candidate_Q > best_Q) && (candidate_K == best_K)))
         {
           nonpruned_INDEX.push_back(s);
         }
@@ -167,11 +168,11 @@ List svp0(std::vector<double> data,
     changepoints.push_back(i);
     i = R(i, 2);
   }
-
   std::reverse(changepoints.begin(), changepoints.end());
 
   return List::create(
     Named("changepoints") = changepoints,
+    Named("lastIndexSet") = INDEX,
     Named("nb") = nb,
     Named("costQ") = NULL,
     Named("R") = R(Range(1, R.nrow() - 1), Range(0, R.ncol() - 1))
