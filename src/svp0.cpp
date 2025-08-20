@@ -44,20 +44,21 @@ List svp0(std::vector<double> data,
 
   size_t n = data.size();
 
-  // Initialization of the R matrix
+  // Initialization of elements in the return
+  // the R matrix
   NumericMatrix R(n + 1, 3); // Q, K, s
-  std::fill(R.begin(), R.end(), std::numeric_limits<double>::infinity());
   R(0, 0) = 0.0; // Default value
   R(0, 1) = 0.0; // Default value
   R(0, 2) = 0.0; // Default value
-  std::vector<size_t> nb(n);    // nb of candidates examined at each t
+  // nb of candidates examined at each t
+  std::vector<size_t> nb(n);
 
   //
   // PREPROCESSING
   //
   // Cumulative sum for optimized calculations
-  std::vector<double> S1(n + 1, 0.0);
-  std::vector<double> S2(n + 1, 0.0);
+  std::vector<double> S1(n + 1, 0);
+  std::vector<double> S2(n + 1, 0);
   for (size_t i = 0; i < n; i++)
   {
     S1[i + 1] = S1[i] + data[i];
@@ -73,13 +74,13 @@ List svp0(std::vector<double> data,
   std::vector<double> seg; // for the validity
   double candidate_Q; // for the lex. comparison
   size_t candidate_K; // for the lex. comparison
-  std::vector<size_t> valid_INDEX;
-  std::vector<size_t> nonpruned_INDEX;
+  std::vector<size_t> valid_INDEX; //indices that pass the validity test
+  std::vector<size_t> nonpruned_INDEX; //indices not pruned by PELT rule
 
   //
   // MAIN LOOP
   //
-  for (size_t t = 1; t <= n; t++)
+  for (size_t t = 1; t < n + 1; t++)
   {
     // initialization
     best_Q = std::numeric_limits<double>::infinity(); // Inf
