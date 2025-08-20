@@ -4,7 +4,7 @@
 \alias{svp0}
 \title{Smallest Valid Partitioning with Validation and Pruning}
 \usage{
-svp0(data, gamma, test, prune_if_unvalid = TRUE)
+svp0(data, gamma, test, prune_if_unvalid = TRUE, prune_if_PELT = TRUE)
 }
 \arguments{
 \item{data}{A numeric vector representing the univariate signal to be segmented.}
@@ -19,6 +19,8 @@ user-defined function \code{test}. If the segment fails the test, the candidate 
 (pruned) from the set of possible changepoints. This accelerates computation by avoiding invalid
 segment extensions. If FALSE, the algorithm skips this validation and considers all candidate
 segments without checking their validity (which can be faster but may return invalid segments).}
+
+\item{prune_if_PELT}{Logical.}
 }
 \value{
 A list with the following components :

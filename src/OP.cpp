@@ -74,21 +74,21 @@ List OP(std::vector<double> data, double penalty)
   // BACKTRACKING
   //
   // Change points reconstruction
-  std::vector<size_t> optimal_cpts;
+  std::vector<size_t> changepoints;
   size_t i = n;
   while (lastChange[i] > 0)
   {
-    optimal_cpts.push_back(lastChange[i]);
+    changepoints.push_back(lastChange[i]);
     i = lastChange[i];
   }
-  std::reverse(optimal_cpts.begin(), optimal_cpts.end());
-  optimal_cpts.push_back(n);
+  std::reverse(changepoints.begin(), changepoints.end());
+  changepoints.push_back(n);
 
   //
   // Return
   //
   return List::create(
-    Named("changepoints") = optimal_cpts,
+    Named("changepoints") = changepoints,
     Named("lastIndexSet") = NULL,
     Named("nb")           = NULL,
     Named("costQ")        = std::vector<double>(Q.begin() + 1, Q.end()));

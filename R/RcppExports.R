@@ -66,6 +66,7 @@ PELT <- function(data, penalty) {
 #' (pruned) from the set of possible changepoints. This accelerates computation by avoiding invalid
 #' segment extensions. If FALSE, the algorithm skips this validation and considers all candidate
 #' segments without checking their validity (which can be faster but may return invalid segments).
+#' @param prune_if_PELT Logical.
 #'
 #' @return A list with the following components :
 #' \describe{
@@ -82,7 +83,7 @@ PELT <- function(data, penalty) {
 #' }
 #'
 #' @export
-svp0 <- function(data, gamma, test, prune_if_unvalid = TRUE) {
-    .Call(`_svpChange_svp0`, data, gamma, test, prune_if_unvalid)
+svp0 <- function(data, gamma, test, prune_if_unvalid = TRUE, prune_if_PELT = TRUE) {
+    .Call(`_svpChange_svp0`, data, gamma, test, prune_if_unvalid, prune_if_PELT)
 }
 

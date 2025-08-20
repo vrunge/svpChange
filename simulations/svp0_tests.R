@@ -41,8 +41,18 @@ res_svp0 <- svp0(data, gamma = 1, test = valid_RANGE)
 res_svp0$changepoints
 res_svp0 <- svp0(data, gamma = 1.9999, test = valid_RANGE)
 res_svp0$changepoints
-res_svp0 <- svp0(data, gamma = 2, test = valid_RANGE)
+
+res_svp0 <- svp0(data, gamma = 0.5, test = valid_RANGE, prune_if_PELT = TRUE)
 res_svp0$changepoints
+res_svp0$nb
+
+res_svp0 <- svp0(data,
+                 gamma = 4,
+                 test = valid_FOCUS,
+                 prune_if_unvalid = F,
+                 prune_if_PELT = T)
+res_svp0$changepoints
+res_svp0$nb
 
 
 

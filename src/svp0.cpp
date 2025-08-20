@@ -2,7 +2,7 @@
 #include <vector>
 #include <limits>
 #include <algorithm>
-
+using namespace std;
 using namespace Rcpp;
 
 //' Smallest Valid Partitioning with Validation and Pruning using Rcpp
@@ -19,6 +19,7 @@ using namespace Rcpp;
 //' (pruned) from the set of possible changepoints. This accelerates computation by avoiding invalid
 //' segment extensions. If FALSE, the algorithm skips this validation and considers all candidate
 //' segments without checking their validity (which can be faster but may return invalid segments).
+//' @param prune_if_PELT Logical.
 //'
 //' @return A list with the following components :
 //' \describe{
@@ -39,9 +40,9 @@ using namespace Rcpp;
 List svp0(std::vector<double> data,
           double gamma,
           Function test,
-          bool prune_if_unvalid = true)
+          bool prune_if_unvalid = true,
+          bool prune_if_PELT = true)
 {
-
   size_t n = data.size();
 
   // Initialization of elements in the return
@@ -66,14 +67,16 @@ List svp0(std::vector<double> data,
   }
 
   bool valid; // for validity test
-  std::vector<size_t> INDEX = {0};
 
   double best_Q;
   size_t best_K;
   size_t best_s;
+  size_t s;
   std::vector<double> seg; // for the validity
   double candidate_Q; // for the lex. comparison
   size_t candidate_K; // for the lex. comparison
+
+  std::vector<size_t> INDEX = {0};
   std::vector<size_t> valid_INDEX; //indices that pass the validity test
   std::vector<size_t> nonpruned_INDEX; //indices not pruned by PELT rule
 
@@ -82,15 +85,16 @@ List svp0(std::vector<double> data,
   //
   for (size_t t = 1; t < n + 1; t++)
   {
+    nb[t - 1] = INDEX.size();
     // initialization
     best_Q = std::numeric_limits<double>::infinity(); // Inf
     best_K = std::numeric_limits<size_t>::max(); // Inf
 
     valid_INDEX.clear(); // set to length 0 this vector, fill it with valid indices
 
-    for (size_t k = 0; k < INDEX.size(); ++k)
+    for (size_t k = 0; k < INDEX.size(); k++)
     {
-      size_t s = INDEX[k];
+      s = INDEX[k];
 
       // test if segment s to t VALID
       seg.assign(data.begin() + s, data.begin() + t);
@@ -99,6 +103,7 @@ List svp0(std::vector<double> data,
       // IF VALID, do the comparisons
       if (valid == true)
       {
+        valid_INDEX.push_back(s);
         candidate_Q = R(s, 0) + (S2[t] - S2[s]) - (S1[t] - S1[s]) * (S1[t] - S1[s]) / (t - s);
         candidate_K = R(s, 1) + 1;
 
@@ -109,18 +114,15 @@ List svp0(std::vector<double> data,
           best_K = candidate_K;
           best_s = s;
         }
-        valid_INDEX.push_back(s);
       }
     }
-
-
     // write the best answer in R
     R(t, 0) = best_Q;
     R(t, 1) = best_K;
     R(t, 2) = best_s;
 
     //
-    //  PRUNING if_unvalid
+    //  PRUNING if prune_if_unvalid == true
     //
     if (prune_if_unvalid == true)
     {
@@ -130,39 +132,46 @@ List svp0(std::vector<double> data,
     //
     //  PRUNING PELT
     //
-    nonpruned_INDEX.clear(); // set to length 0 this vector, fill it with non pruned indices
-    for (size_t k = 0; k < INDEX.size(); k++)
+    if (prune_if_PELT == true)
     {
-      size_t s = INDEX[k];
-      candidate_Q = R(s, 0) + (S2[t] - S2[s]) - (S1[t] - S1[s]) * (S1[t] - S1[s]) / (t - s);
-      candidate_K = R(s, 1);
-
-      if (!(candidate_Q > best_Q && candidate_K == best_K))
+      nonpruned_INDEX.clear(); // set to length 0 this vector, fill it with non pruned indices
+      for (size_t k = 0; k < INDEX.size(); k++)
       {
-        nonpruned_INDEX.push_back(s);
+        s = INDEX[k];
+        candidate_Q = R(s, 0) + (S2[t] - S2[s]) - (S1[t] - S1[s]) * (S1[t] - S1[s]) / (t - s);
+        candidate_K = R(s, 1);
+
+        std::cout<< ((candidate_Q <= best_Q) || (candidate_K != best_K)) << std::endl;
+        if (((candidate_Q <= best_Q) || (candidate_K != best_K)))
+        {
+          nonpruned_INDEX.push_back(s);
+        }
       }
+      nonpruned_INDEX.push_back(t);
+      INDEX.swap(nonpruned_INDEX); // index now contains the nonpruned indices (by PELT SVP)
     }
-    nonpruned_INDEX.push_back(t);
-    INDEX.swap(nonpruned_INDEX); // index now contains the nonpruned indices (by PELT SVP)
-    nb[t - 1] = INDEX.size();
+    else
+    {
+      INDEX.push_back(t);
+    }
   }
 
   //
   // BACKTRACKING
   //
   // Change points reconstruction
-  std::vector<size_t> optimal_cpts;
-  size_t t = n;
-  while (t > 0)
+  std::vector<size_t> changepoints;
+  size_t i = n;
+  while (i > 0)
   {
-    optimal_cpts.push_back(t);
-    t = R(t, 2);
+    changepoints.push_back(i);
+    i = R(i, 2);
   }
 
-  std::reverse(optimal_cpts.begin(), optimal_cpts.end());
+  std::reverse(changepoints.begin(), changepoints.end());
 
   return List::create(
-    Named("changepoints") = optimal_cpts,
+    Named("changepoints") = changepoints,
     Named("nb") = nb,
     Named("costQ") = NULL,
     Named("R") = R(Range(1, R.nrow() - 1), Range(0, R.ncol() - 1))
