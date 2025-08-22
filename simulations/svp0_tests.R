@@ -120,4 +120,3 @@ plot(svp$nb, type = 'l')
 svp$R[svp$lastIndexSet,2]
 
 
-
