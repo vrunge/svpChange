@@ -55,16 +55,21 @@ List svp(std::vector<double> data,
 
   std::vector<size_t> nb(n); // nb of candidates examined at each t
 
+  //
+  // PREPROCESSING
+  //
   // Cumulative sum for optimized calculations
-  std::vector<double> S1(n + 1, 0.0);
-  std::vector<double> S2(n + 1, 0.0);
+  std::vector<double> S1(n + 1, 0);
+  std::vector<double> S2(n + 1, 0);
   for (size_t i = 0; i < n; ++i)
   {
     S1[i + 1] = S1[i] + data[i];
     S2[i + 1] = S2[i] + data[i] * data[i];
   }
 
+  //
   // Define a generic initializer for test objects
+  //
   std::function<std::unique_ptr<TestBase>()> newTest;
   if (test == "gaussian_mean")
   {
@@ -79,9 +84,13 @@ List svp(std::vector<double> data,
     stop("Unknown test type");
   }
 
+  //
+  //
+  //
   std::vector<size_t> INDEX = {0};
   std::vector<size_t> valid_INDEX;  // indices that pass the validity test
   std::vector<size_t> nonpruned_INDEX; // indices not pruned by PELT rule
+
   std::vector<std::unique_ptr<TestBase>> pruned_TESTS;
   std::vector<std::unique_ptr<TestBase>> TESTS;
   TESTS.push_back(newTest());
@@ -93,7 +102,6 @@ List svp(std::vector<double> data,
   bool valid;         // for validity test
   double candidate_Q; // for the lex. comparison
   size_t candidate_K; // for the lex. comparison
-  double stat_val;
 
   for (size_t t = 1; t < n + 1; ++t)
   {
@@ -103,8 +111,10 @@ List svp(std::vector<double> data,
     best_Q = std::numeric_limits<double>::infinity();
     best_K = std::numeric_limits<size_t>::max();
 
+    ///
+    /// the elements to be saved
+    ///
     valid_INDEX.clear(); // set to length 0 this vector, fill it with valid indices
-
     std::vector<std::unique_ptr<TestBase>> new_TESTS;
 
     for (size_t k = 0; k < INDEX.size(); ++k)
@@ -113,12 +123,16 @@ List svp(std::vector<double> data,
       auto& test_instance = TESTS[k];
 
       test_instance->update(data[t - 1]);
-      stat_val = test_instance->statistic();
-      valid = stat_val < gamma;
+      valid = test_instance->statistic() < gamma;
 
       if (valid == true)
       {
+        ////
+        //// save the s and the instance
+        ////
         valid_INDEX.push_back(s);
+        new_TESTS.push_back(std::move(test_instance));
+
         candidate_Q = R(s, 0) + (S2[t] - S2[s]) - (S1[t] - S1[s]) * (S1[t] - S1[s]) / (t - s);
         candidate_K = R(s, 1) + 1;
 
@@ -128,14 +142,11 @@ List svp(std::vector<double> data,
           best_K = candidate_K;
           best_s = s;
         }
-        new_TESTS.push_back(std::move(test_instance));
       }
     }
-
     R(t, 0) = best_Q;
     R(t, 1) = best_K;
     R(t, 2) = best_s;
-
 
     //
     //  PRUNING if prune_if_unvalid == true
@@ -143,6 +154,7 @@ List svp(std::vector<double> data,
     if (prune_if_unvalid == true)
     {
       INDEX.swap(valid_INDEX); // index now contains the valid_INDEX only
+
     }
 
     //
@@ -152,9 +164,9 @@ List svp(std::vector<double> data,
     {
       nonpruned_INDEX.clear(); // set to length 0 this vector, fill it with non pruned indices
       pruned_TESTS.clear();
-      for (size_t k = 0; k < valid_INDEX.size(); ++k)
+      for (size_t k = 0; k < INDEX.size(); ++k)
       {
-        s = valid_INDEX[k];
+        s = INDEX[k];
         auto& test_instance = new_TESTS[k];
 
         candidate_Q = R(s, 0) + (S2[t] - S2[s]) - (S1[t] - S1[s]) * (S1[t] - S1[s]) / (t - s);
@@ -173,14 +185,16 @@ List svp(std::vector<double> data,
       pruned_TESTS.push_back(newTest());
       TESTS = std::move(pruned_TESTS);
     }
-
     else
     {
       INDEX.push_back(t);
     }
   }
 
-  // Changepoints reconstruction (backtracking)
+  //
+  // BACKTRACKING
+  //
+  // Change points reconstruction
   std::vector<size_t> changepoints;
   size_t i = n;
   while (i > 0)
