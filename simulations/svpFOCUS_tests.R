@@ -30,12 +30,7 @@ res_svp <- SVP(data = data,
 res_svp0$changepoints
 res_svp$changepoints
 
-res_svp0$R[,1] - res_svp$R[,1]
-
-
-
-
-
+#res_svp0$R[,1] - res_svp$R[,1]
 
 
 res_PELT <- PELT(data = data,
