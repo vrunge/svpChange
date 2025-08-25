@@ -36,7 +36,7 @@ valid_FOCUS_last <- function(y, gamma)
 {
   res <- FOCuS::FOCuS(y, gamma)
 
-  if(res$changepoint == -1)
+  if(res$changepoint == -1) #### TO DO
   {
     return(TRUE)
   }
@@ -140,8 +140,10 @@ valid_OP <- function(y, gamma)
     temp <- (sum((segment1 - mean_seg1)^2) + sum((segment2 - mean_seg2)^2))
     if(temp < val){val <- temp}
   }
-  return(test = (total < (val + gamma)))
+  return(test = (total < (val + 2*gamma)))
 }
+
+### here we used 2*gamma to be coherent with FOCUS
 
 
 
