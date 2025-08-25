@@ -9,13 +9,13 @@ valid_OP(y, gamma)
 \arguments{
 \item{y}{A numeric vector representing a segment of the signal.}
 
-\item{gamma}{A numeric threshold for allowable difference between total cost and optimal bipartition.}
+\item{gamma}{A numeric threshold for penalizing the introduction of a new segment}
 }
 \value{
-TRUE if the segment cannot be split into two parts with significantly lower cost.
+TRUE if the segment cannot be split into two parts with lower (penalized) cost.
 }
 \description{
-Tests whether the total cost of the segment is close enough to the best two-part segmentation cost.
+Tests whether the total cost of the segment is smaller than the best two-part penalized segmentation cost.
 }
 \details{
 Optimal Partitioning Cost Test

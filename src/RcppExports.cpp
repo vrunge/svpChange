@@ -35,6 +35,18 @@ BEGIN_RCPP
     return rcpp_result_gen;
 END_RCPP
 }
+// SN
+List SN(std::vector<double> data, int Kmax);
+RcppExport SEXP _svpChange_SN(SEXP dataSEXP, SEXP KmaxSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< std::vector<double> >::type data(dataSEXP);
+    Rcpp::traits::input_parameter< int >::type Kmax(KmaxSEXP);
+    rcpp_result_gen = Rcpp::wrap(SN(data, Kmax));
+    return rcpp_result_gen;
+END_RCPP
+}
 // SVP
 List SVP(std::vector<double> data, double gamma, std::string test, bool prune_if_unvalid);
 RcppExport SEXP _svpChange_SVP(SEXP dataSEXP, SEXP gammaSEXP, SEXP testSEXP, SEXP prune_if_unvalidSEXP) {
@@ -68,6 +80,7 @@ END_RCPP
 static const R_CallMethodDef CallEntries[] = {
     {"_svpChange_OP", (DL_FUNC) &_svpChange_OP, 2},
     {"_svpChange_PELT", (DL_FUNC) &_svpChange_PELT, 2},
+    {"_svpChange_SN", (DL_FUNC) &_svpChange_SN, 2},
     {"_svpChange_SVP", (DL_FUNC) &_svpChange_SVP, 4},
     {"_svpChange_svp0", (DL_FUNC) &_svpChange_svp0, 5},
     {NULL, NULL, 0}

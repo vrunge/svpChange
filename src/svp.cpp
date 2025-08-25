@@ -101,63 +101,110 @@ List SVP(std::vector<double> data,
   double candidate_Q; // for the lex. comparison
   size_t candidate_K; // for the lex. comparison
 
-  for (size_t t = 1; t < n + 1; ++t)
+  if (prune_if_unvalid == true)
   {
-    nb[t - 1] = INDEX.size();
-
-    // Initialization
-    best_Q = std::numeric_limits<double>::infinity();
-    best_K = std::numeric_limits<size_t>::max();
-
-    ///
-    /// the elements to be saved
-    ///
-    valid_INDEX.clear(); // set to length 0 this vector, fill it with valid indices
-    std::vector<std::unique_ptr<TestBase>> valid_TESTS; // to IMPROVE
-
-    for (size_t k = 0; k < INDEX.size(); ++k)
+    for (size_t t = 1; t < n + 1; ++t)
     {
-      s = INDEX[k];
-      auto& test_instance = TESTS[k];
+      nb[t - 1] = INDEX.size();
 
-      test_instance->update(data[t - 1]);
-      valid = test_instance->statistic() < gamma;
+      // Initialization
+      best_Q = std::numeric_limits<double>::infinity();
+      best_K = std::numeric_limits<size_t>::max();
 
-      if (valid == true)
+      ///
+      /// the elements to be saved
+      ///
+      valid_INDEX.clear(); // set to length 0 this vector, fill it with valid indices
+      std::vector<std::unique_ptr<TestBase>> valid_TESTS; // to IMPROVE
+
+      for (size_t k = 0; k < INDEX.size(); ++k)
       {
-        ////
-        //// save the s and the instance
-        ////
-        valid_INDEX.push_back(s);
-        valid_TESTS.push_back(std::move(test_instance));
+        s = INDEX[k];
+        auto& test_instance = TESTS[k];
 
-        candidate_Q = R(s, 0) + (S2[t] - S2[s]) - (S1[t] - S1[s]) * (S1[t] - S1[s]) / (t - s);
-        candidate_K = R(s, 1) + 1;
+        test_instance->update(data[t - 1]);
+        valid = test_instance->statistic() < gamma;
 
-        if (candidate_K < best_K || (candidate_K == best_K && candidate_Q < best_Q))
+        if (valid == true)
         {
-          best_Q = candidate_Q;
-          best_K = candidate_K;
-          best_s = s;
+          ////
+          //// save the s and the instance
+          ////
+          valid_INDEX.push_back(s);
+          valid_TESTS.push_back(std::move(test_instance));
+
+          candidate_Q = R(s, 0) + (S2[t] - S2[s]) - (S1[t] - S1[s]) * (S1[t] - S1[s]) / (t - s);
+          candidate_K = R(s, 1) + 1;
+
+          if (candidate_K < best_K || (candidate_K == best_K && candidate_Q < best_Q))
+          {
+            best_Q = candidate_Q;
+            best_K = candidate_K;
+            best_s = s;
+          }
         }
       }
-    }
-    R(t, 0) = best_Q;
-    R(t, 1) = best_K;
-    R(t, 2) = best_s;
+      R(t, 0) = best_Q;
+      R(t, 1) = best_K;
+      R(t, 2) = best_s;
 
-    //
-    //  PRUNING if prune_if_unvalid == true
-    //
-    if (prune_if_unvalid == true)
-    {
+      //
+      //  PRUNING if prune_if_unvalid == true
+      //
       INDEX.swap(valid_INDEX); // index now contains the valid_INDEX only
       TESTS = std::move(valid_TESTS);
+      TESTS.push_back(newTest());
+      INDEX.push_back(t);
     }
-    TESTS.push_back(newTest());
-    INDEX.push_back(t);
+  } ////////////////////////////////////////////////////////////////////////////////
+  else ///////////////////////////////////////////////////////////////////////////
+  { ////////////////////////////////////////////////////////////////////////////////
+    for (size_t t = 1; t < n + 1; ++t)
+    {
+      nb[t - 1] = INDEX.size();
+
+      // Initialization
+      best_Q = std::numeric_limits<double>::infinity();
+      best_K = std::numeric_limits<size_t>::max();
+
+      ///
+      /// the elements to be saved
+      ///
+
+      for (size_t k = 0; k < INDEX.size(); ++k)
+      {
+        s = INDEX[k];
+        auto& test_instance = TESTS[k];
+
+        test_instance->update(data[t - 1]);
+        valid = test_instance->statistic() < gamma;
+
+        if (valid == true)
+        {
+          candidate_Q = R(s, 0) + (S2[t] - S2[s]) - (S1[t] - S1[s]) * (S1[t] - S1[s]) / (t - s);
+          candidate_K = R(s, 1) + 1;
+
+          if (candidate_K < best_K || (candidate_K == best_K && candidate_Q < best_Q))
+          {
+            best_Q = candidate_Q;
+            best_K = candidate_K;
+            best_s = s;
+          }
+        }
+      }
+      R(t, 0) = best_Q;
+      R(t, 1) = best_K;
+      R(t, 2) = best_s;
+
+      //
+      //  PRUNING if prune_if_unvalid == true
+      //
+      TESTS.push_back(newTest());
+      INDEX.push_back(t);
+    }
   }
 
+  ////////////////////////////////////////////////////////////////////////////////
   //
   // BACKTRACKING
   //
