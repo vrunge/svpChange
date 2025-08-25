@@ -125,6 +125,22 @@ List SVP(std::vector<double> data,
         test_instance->update(data[t - 1]);
         valid = test_instance->statistic() < gamma;
 
+        // TO DO to GET THE LINEAR COMPLEXITY
+        //
+        // NOT POSSIBLE YET because of test_instance->update(data[t - 1]);
+        // we need to postpone the update step, and do a O(1) time chunck update
+        //
+        //candidate_K = R(s, 1) + 1;
+        //if (best_K != std::numeric_limits<size_t>::max() && candidate_K > best_K)
+        //{
+        //  valid_INDEX.insert(valid_INDEX.end(),
+        //                     INDEX.begin() + k + 1 , INDEX.end());
+        //  valid_TESTS.insert(valid_TESTS.end(),
+        //                     std::make_move_iterator(TESTS.begin() + k + 1),
+        //                     std::make_move_iterator(TESTS.end()));
+        //  break;
+        //}
+
         if (valid == true)
         {
           ////
