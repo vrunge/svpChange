@@ -21,11 +21,11 @@ using namespace Rcpp;
 //' (pruned) from the set of possible changepoints. This accelerates computation by avoiding invalid
 //' segment extensions. If FALSE, the algorithm skips this validation and considers all candidate
 //' segments without checking their validity (which can be faster but may return invalid segments).
-//' @param prune_if_PELT Logical.
 //'
 //' @return A list with the following components :
 //' \describe{
 //'   \item{changepoints}{Integer vector indicating the ending index of each segment (i.e., positions of changepoints).}
+//'  \item{lastIndexSet}{Integer vector containing the non-pruned indices at the end of the algorithm execution}
 //'   \item{nb}{Integer vector of length \code{length(data)}. At each position \code{t}, it records the number of candidates tested.}
 //'   \item{costQ}{Numeric vector of length \code{length(data)}. Quadratic cost value at each time step. Set to NULL as it is recorded into matrix R}
 //'   \item{R}{A matrix of dimension \code{(length(data)+1) x 3} containing, for each time step :
@@ -37,13 +37,13 @@ using namespace Rcpp;
 //'   }
 //' }
 //'
+//'
 //' @export
 // [[Rcpp::export]]
-List svp(std::vector<double> data,
+List SVP(std::vector<double> data,
          double gamma,
          std::string test,
-         bool prune_if_unvalid = true,
-         bool prune_if_PELT = true)
+         bool prune_if_unvalid = true)
 {
   size_t n = data.size();
 
@@ -61,7 +61,7 @@ List svp(std::vector<double> data,
   // Cumulative sum for optimized calculations
   std::vector<double> S1(n + 1, 0);
   std::vector<double> S2(n + 1, 0);
-  for (size_t i = 0; i < n; ++i)
+  for (size_t i = 0; i < n; i++)
   {
     S1[i + 1] = S1[i] + data[i];
     S2[i + 1] = S2[i] + data[i] * data[i];
@@ -73,7 +73,7 @@ List svp(std::vector<double> data,
   std::function<std::unique_ptr<TestBase>()> newTest;
   if (test == "gaussian_mean")
   {
-    newTest = []() { return std::make_unique<GaussianMean>(); };
+    newTest = []() { return std::make_unique<GaussianMean>();};
   }
   // Add more cases here for other tests, e.g.:
   // else if (test == "bernoulli_mean") {
@@ -89,9 +89,7 @@ List svp(std::vector<double> data,
   //
   std::vector<size_t> INDEX = {0};
   std::vector<size_t> valid_INDEX;  // indices that pass the validity test
-  std::vector<size_t> nonpruned_INDEX; // indices not pruned by PELT rule
 
-  std::vector<std::unique_ptr<TestBase>> pruned_TESTS;
   std::vector<std::unique_ptr<TestBase>> TESTS;
   TESTS.push_back(newTest());
 
@@ -115,7 +113,7 @@ List svp(std::vector<double> data,
     /// the elements to be saved
     ///
     valid_INDEX.clear(); // set to length 0 this vector, fill it with valid indices
-    std::vector<std::unique_ptr<TestBase>> new_TESTS;
+    std::vector<std::unique_ptr<TestBase>> valid_TESTS; // to IMPROVE
 
     for (size_t k = 0; k < INDEX.size(); ++k)
     {
@@ -131,7 +129,7 @@ List svp(std::vector<double> data,
         //// save the s and the instance
         ////
         valid_INDEX.push_back(s);
-        new_TESTS.push_back(std::move(test_instance));
+        valid_TESTS.push_back(std::move(test_instance));
 
         candidate_Q = R(s, 0) + (S2[t] - S2[s]) - (S1[t] - S1[s]) * (S1[t] - S1[s]) / (t - s);
         candidate_K = R(s, 1) + 1;
@@ -154,41 +152,10 @@ List svp(std::vector<double> data,
     if (prune_if_unvalid == true)
     {
       INDEX.swap(valid_INDEX); // index now contains the valid_INDEX only
-
+      TESTS = std::move(valid_TESTS);
     }
-
-    //
-    //  PRUNING PELT
-    //
-    if (prune_if_PELT == true)
-    {
-      nonpruned_INDEX.clear(); // set to length 0 this vector, fill it with non pruned indices
-      pruned_TESTS.clear();
-      for (size_t k = 0; k < INDEX.size(); ++k)
-      {
-        s = INDEX[k];
-        auto& test_instance = new_TESTS[k];
-
-        candidate_Q = R(s, 0) + (S2[t] - S2[s]) - (S1[t] - S1[s]) * (S1[t] - S1[s]) / (t - s);
-        candidate_K = R(s, 1);
-
-        if (!(candidate_Q > best_Q && candidate_K == best_K))
-        {
-          nonpruned_INDEX.push_back(s);
-          pruned_TESTS.push_back(std::move(test_instance));
-        }
-      }
-
-      nonpruned_INDEX.push_back(t); // add new candidate for t
-      INDEX.swap(nonpruned_INDEX); // index now contains the nonpruned indices (by PELT SVP)
-
-      pruned_TESTS.push_back(newTest());
-      TESTS = std::move(pruned_TESTS);
-    }
-    else
-    {
-      INDEX.push_back(t);
-    }
+    TESTS.push_back(newTest());
+    INDEX.push_back(t);
   }
 
   //

@@ -36,8 +36,7 @@ res_svp0$R[res_svp0$lastIndexSet,2]
 res_svp <- svp(data = data,
                gamma = gamma,
                test = "gaussian_mean",
-               prune_if_unvalid = T,
-               prune_if_PELT = F)
+               prune_if_unvalid = T)
 res_svp$changepoints
 abline(v = res_svp$changepoints)
 res_svp$nb

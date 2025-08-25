@@ -66,11 +66,11 @@ PELT <- function(data, penalty) {
 #' (pruned) from the set of possible changepoints. This accelerates computation by avoiding invalid
 #' segment extensions. If FALSE, the algorithm skips this validation and considers all candidate
 #' segments without checking their validity (which can be faster but may return invalid segments).
-#' @param prune_if_PELT Logical.
 #'
 #' @return A list with the following components :
 #' \describe{
 #'   \item{changepoints}{Integer vector indicating the ending index of each segment (i.e., positions of changepoints).}
+#'  \item{lastIndexSet}{Integer vector containing the non-pruned indices at the end of the algorithm execution}
 #'   \item{nb}{Integer vector of length \code{length(data)}. At each position \code{t}, it records the number of candidates tested.}
 #'   \item{costQ}{Numeric vector of length \code{length(data)}. Quadratic cost value at each time step. Set to NULL as it is recorded into matrix R}
 #'   \item{R}{A matrix of dimension \code{(length(data)+1) x 3} containing, for each time step :
@@ -82,9 +82,10 @@ PELT <- function(data, penalty) {
 #'   }
 #' }
 #'
+#'
 #' @export
-svp <- function(data, gamma, test, prune_if_unvalid = TRUE, prune_if_PELT = TRUE) {
-    .Call(`_svpChange_svp`, data, gamma, test, prune_if_unvalid, prune_if_PELT)
+SVP <- function(data, gamma, test, prune_if_unvalid = TRUE) {
+    .Call(`_svpChange_SVP`, data, gamma, test, prune_if_unvalid)
 }
 
 #' Smallest Valid Partitioning with Validation and Pruning using Rcpp
@@ -118,7 +119,7 @@ svp <- function(data, gamma, test, prune_if_unvalid = TRUE, prune_if_PELT = TRUE
 #' }
 #'
 #' @export
-svp0 <- function(data, gamma, test, prune_if_unvalid = TRUE, prune_if_PELT = TRUE) {
+svp0 <- function(data, gamma, test, prune_if_unvalid = TRUE, prune_if_PELT = FALSE) {
     .Call(`_svpChange_svp0`, data, gamma, test, prune_if_unvalid, prune_if_PELT)
 }
 

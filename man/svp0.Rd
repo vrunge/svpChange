@@ -4,7 +4,7 @@
 \alias{svp0}
 \title{Smallest Valid Partitioning with Validation and Pruning}
 \usage{
-svp0(data, gamma, test, prune_if_unvalid = TRUE, prune_if_PELT = TRUE)
+svp0(data, gamma, test, prune_if_unvalid = TRUE, prune_if_PELT = FALSE)
 }
 \arguments{
 \item{data}{A numeric vector representing the univariate signal to be segmented.}

@@ -41,7 +41,7 @@ List svp0(std::vector<double> data,
           double gamma,
           Function test,
           bool prune_if_unvalid = true,
-          bool prune_if_PELT = true)
+          bool prune_if_PELT = false)
 {
   size_t n = data.size();
 
