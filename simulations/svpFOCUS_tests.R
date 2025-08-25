@@ -16,11 +16,11 @@ chpts = c(0.1,0.3,0.4,0.45,0.55,0.7,0.75,0.95,1)*n
 data <- tsGenerator(chpts = chpts,
                       parameters = c(0,gap,0,gap,0,gap,0,gap,0),
                       sdNoise = 1)
-gamma <- 20
+gamma <- 5
 bool <- T
 res_svp0 <- svp0(data,
                  gamma,
-                 test = valid_FOCUS,
+                 test = valid_FOCUS, #valid_FOCUS_last
                  prune_if_unvalid = bool)
 
 res_svp <- SVP(data = data,
@@ -29,6 +29,14 @@ res_svp <- SVP(data = data,
                prune_if_unvalid = bool)
 res_svp0$changepoints
 res_svp$changepoints
+
+res_svp0$R[,1] - res_svp$R[,1]
+
+
+
+
+
+
 
 res_PELT <- PELT(data = data,
              penalty = gamma)
@@ -63,6 +71,6 @@ for(i in 2:len)
   temp <- (sum((segment1 - mean_seg1)^2) + sum((segment2 - mean_seg2)^2))
   if(temp < val){val <- temp}
 }
-(total - val)/2
+(total - val)
 
 
