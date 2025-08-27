@@ -169,6 +169,7 @@ List svp0(std::vector<double> data,
     i = R(i, 2);
   }
   std::reverse(changepoints.begin(), changepoints.end());
+  std::reverse(INDEX.begin(), INDEX.end());
 
   return List::create(
     Named("changepoints") = changepoints,
