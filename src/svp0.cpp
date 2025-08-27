@@ -70,7 +70,7 @@ List svp0(std::vector<double> data,
 
   double best_Q;
   size_t best_K;
-  size_t best_s;
+  size_t best_s = 0;
   size_t s;
   std::vector<double> seg; // for the validity
   double candidate_Q; // for the lex. comparison
