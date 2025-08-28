@@ -18,8 +18,8 @@
  * PRUNING FUNCTION checks and removes quadratics that are no longer optimal
  */
 
-void prune (Cost& Q, const CUSUM& cs, const double& theta0, const bool isRight) {
-
+void prune (Cost& Q, const CUSUM& cs, const double& theta0, const bool isRight)
+{
   // if we only have one piece, exit
   if (Q.k == 0)
     return ;
@@ -28,25 +28,30 @@ void prune (Cost& Q, const CUSUM& cs, const double& theta0, const bool isRight) 
   // this sets the condition
   std::function<bool(const std::unique_ptr<Piece>&, const std::unique_ptr<Piece>&)> cond;
 
-  if (std::isnan(theta0)) {
-    if (isRight) {
+  if (std::isnan(theta0))
+  {
+    if (isRight)
+    {
       cond = [cs, theta0](const std::unique_ptr<Piece>& q1, const std::unique_ptr<Piece>& q2)
       {
         return q1->argmax(cs) <= q2->argmax(cs);
       };
-    } else {
+    } else
+    {
       cond = [cs, theta0](const std::unique_ptr<Piece>& q1, const std::unique_ptr<Piece>& q2)
       {
         return q1->argmax(cs) >= q2->argmax(cs);
       };
     }
   } else {
-    if (isRight) {
+    if (isRight)
+    {
       cond = [cs, theta0](const std::unique_ptr<Piece>& q1, const std::unique_ptr<Piece>& q2)
       {
         return q1->argmax(cs) <= std::max(theta0, q2->argmax(cs));
       };
-    } else {
+    } else
+    {
       cond = [cs, theta0](const std::unique_ptr<Piece>& q1, const std::unique_ptr<Piece>& q2)
       {
         return q1->argmax(cs) >= std::min(theta0, q2->argmax(cs));
@@ -76,11 +81,7 @@ void prune (Cost& Q, const CUSUM& cs, const double& theta0, const bool isRight) 
 
     // std::cout << "This should be fine..." << (*qi)->argmax(cs) << std::endl;
     // std::cout << "I think that here's the bug..." << (*std::next(qi, 1))->argmax(cs) << std::endl;
-
-
   }
-
-
 }
 
 
@@ -99,8 +100,8 @@ double get_max_all (const Cost& Q, const CUSUM& cs, const double& theta0, const 
 
   double max = -INFINITY; //std::numeric_limits<double>::lowest();
 
-  for (long unsigned int i = 0; i <= Q.k; i++) {
-
+  for (long unsigned int i = 0; i <= Q.k; i++)
+  {
     max = std::max( max, get_max(Q.ps[i], cs, theta0) - m0val );
     // std::cout << "tau: " << Q.ps[i]->tau << " st: " << Q.ps[i]->St << " m0: " << Q.ps[i]->m0 << " max-m0val: "<< max<< " | \n";
   }
@@ -109,14 +110,15 @@ double get_max_all (const Cost& Q, const CUSUM& cs, const double& theta0, const 
   return max;
 }
 
-int get_tau_max (const Cost& Q, const CUSUM& cs, const double& theta0, const double& m0val) {
-
+int get_tau_max (const Cost& Q, const CUSUM& cs, const double& theta0, const double& m0val)
+{
   auto tau = 0;
   double max = -INFINITY;
 
-  for (long unsigned int i = 0; i <= Q.k; i++) {
-
-    if( max< get_max(Q.ps[i], cs, theta0) - m0val ){
+  for (long unsigned int i = 0; i <= Q.k; i++)
+  {
+    if( max< get_max(Q.ps[i], cs, theta0) - m0val )
+    {
       tau = Q.ps[i]->tau;
     }
   }
@@ -132,7 +134,8 @@ int get_tau_max (const Cost& Q, const CUSUM& cs, const double& theta0, const dou
  * focus recursion, one iteration
  */
 
-void Info::update(const double& y) {
+void Info::update(const double& y)
+{
   cs.n++;
   cs.Sn += y;
 
@@ -146,22 +149,26 @@ void Info::update(const double& y) {
   Qr.opt = get_max_all(Qr, cs, theta0, m0val);
   Ql.opt = get_max_all(Ql, cs, theta0, m0val);
 
-  if (Qr.k < (Qr.ps.size() - 1)) {
+  if (Qr.k < (Qr.ps.size() - 1))
+  {
     Qr.k++;
     Qr.ps[Qr.k]->St = cs.Sn;
     Qr.ps[Qr.k]->tau = cs.n;
     Qr.ps[Qr.k]->m0 = m0val;
-  } else {
+  } else
+  {
     Qr.ps.push_back(std::move(newP(cs.Sn, cs.n, m0val)));
     Qr.k = Qr.ps.size() - 1;
   }
 
-  if (Ql.k < (Ql.ps.size() - 1)) {
+  if (Ql.k < (Ql.ps.size() - 1))
+  {
     Ql.k++;
     Ql.ps[Ql.k]->St = cs.Sn;
     Ql.ps[Ql.k]->tau = cs.n;
     Ql.ps[Ql.k]->m0 = m0val;
-  } else {
+  } else
+  {
     Ql.ps.push_back(std::move(newP(cs.Sn, cs.n, m0val)));
     Ql.k = Ql.ps.size() - 1;
   }
