@@ -75,6 +75,14 @@ List SVP(std::vector<double> data,
   {
     newTest = []() { return std::make_unique<GaussianMean>();};
   }
+  else if (test == "gamma_rate")
+  {
+    newTest = []() { return std::make_unique<GammaRate>(); };
+  }
+  else if (test == "gaussian_variance")
+  {
+    newTest = []() { return std::make_unique<GaussianVariance>(); };
+  }  
   // Add more cases here for other tests, e.g.:
   // else if (test == "bernoulli_mean") {
   //   newTest = []() { return std::make_unique<BernoulliMean>(); };
