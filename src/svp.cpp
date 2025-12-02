@@ -140,7 +140,7 @@ List SVP(std::vector<double> data,
           // the instance was not updated for some past t due to pruning)
           // ensure we update all the missing observations up to the current t
           // NOTE: use <= t-1 so we include the last observation at index t-1
-          for (size_t u = s + 1; u <= t - 1; ++u) {
+          for (size_t u = s + 1; u <= t; ++u) {
             test_instance->update(data[u - 1]);
           }
         }
