@@ -4,6 +4,7 @@
 #include <vector>
 #include <limits>
 #include <algorithm>
+#include <iterator> // for std::make_move_iterator
 
 using namespace Rcpp;
 
@@ -87,12 +88,23 @@ List SVP(std::vector<double> data,
         auto& test_instance = TESTS[k];
         size_t last_up = LAST_UPDATES[k];
 
-        // compute candidate_K and possibly skip (safe because instance is up-to-date)
+        // compute candidate_K and possibly skip checking/updating for current t
         candidate_K = static_cast<size_t>(R(s, 1)) + 1;
         if (candidate_K > best_K) {
-          continue; // no chance to improve lexicographic order
-        }
+          // IMPORTANT: do NOT permanently discard the current candidate or the remaining ones.
+          // Append the current and all remaining candidates to the kept lists (without updating them now),
+          // then break out of the loop. They will be evaluated (caught-up) in future t.
+          valid_INDEX.insert(valid_INDEX.end(), INDEX.begin() + k, INDEX.end());
 
+          valid_TESTS.insert(valid_TESTS.end(),
+                             std::make_move_iterator(TESTS.begin() + k),
+                             std::make_move_iterator(TESTS.end()));
+
+          valid_LAST_UPDATES.insert(valid_LAST_UPDATES.end(),
+                                    LAST_UPDATES.begin() + k,
+                                    LAST_UPDATES.end());
+          break;
+        }
 
         // catch up this instance up to current t (so statistic() is correct)
         if (last_up < t) {
@@ -113,8 +125,6 @@ List SVP(std::vector<double> data,
           valid_INDEX.push_back(s);
           valid_TESTS.push_back(std::move(test_instance));
           valid_LAST_UPDATES.push_back(last_up);
-
-
 
           if (candidate_K < best_K || (candidate_K == best_K && candidate_Q < best_Q))
           {

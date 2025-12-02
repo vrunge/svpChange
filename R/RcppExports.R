@@ -75,38 +75,6 @@ SN <- function(data, Kmax) {
     .Call(`_svpChange_SN`, data, Kmax)
 }
 
-#' Smallest Valid Partitioning with FOCUS validity test
-#'
-#' @title Smallest Valid Partitioning with Validation and Pruning
-#' @description This function implements a dynamic programming approach to segment a univariate signal into the smallest number of valid segments, according to a user-defined validation function. Each segment must pass a validity test (e.g., based on variance, range, etc.). The algorithm minimizes a quadratic cost subject to this constraint.
-#'
-#' @param data A numeric vector representing the univariate signal to be segmented.
-#' @param gamma A numeric value used as a threshold in the validation function and as a penalty for each segment.
-#' @param test A function of the form `function(data, gamma)` returning TRUE if the segment is valid. Default is `valid_OP`.
-#' @param prune_if_unvalid Logical. If TRUE (default), the algorithm applies *segment-wise validation*:
-#' at each time step, it tests whether the candidate segment \code{data[(s+1):t]} is valid using the
-#' user-defined function \code{test}. If the segment fails the test, the candidate \code{s} is removed
-#' (pruned) from the set of possible changepoints. This accelerates computation by avoiding invalid
-#' segment extensions. If FALSE, the algorithm skips this validation and considers all candidate
-#' segments without checking their validity (which can be faster but may return invalid segments).
-#'
-#' @return A list with the following components :
-#' \describe{
-#'   \item{changepoints}{Integer vector indicating the ending index of each segment (i.e., positions of changepoints).}
-#'  \item{lastIndexSet}{Integer vector containing the non-pruned indices at the end of the algorithm execution}
-#'   \item{nb}{Integer vector of length \code{length(data)}. At each position \code{t}, it records the number of candidates tested.}
-#'   \item{costQ}{Numeric vector of length \code{length(data)}. Quadratic cost value at each time step. Set to NULL as it is recorded into matrix R}
-#'   \item{R}{A matrix of dimension \code{(length(data)+1) x 3} containing, for each time step :
-#'     \describe{
-#'       \item{Q}{cumulative cost}
-#'       \item{K}{number of segments in Q}
-#'       \item{s}{previous changepoint}
-#'     }
-#'   }
-#' }
-#'
-#'
-#' @export
 SVP <- function(data, gamma, test, prune_if_unvalid = TRUE) {
     .Call(`_svpChange_SVP`, data, gamma, test, prune_if_unvalid)
 }
@@ -144,5 +112,41 @@ SVP <- function(data, gamma, test, prune_if_unvalid = TRUE) {
 #' @export
 svp0 <- function(data, gamma, test, prune_if_unvalid = TRUE, prune_if_PELT = FALSE) {
     .Call(`_svpChange_svp0`, data, gamma, test, prune_if_unvalid, prune_if_PELT)
+}
+
+#' Smallest Valid Partitioning with FOCUS validity test
+#'
+#' @title Smallest Valid Partitioning with Validation and Pruning
+#' @description This function implements a dynamic programming approach to segment a univariate signal into the smallest number of valid segments, according to a user-defined validation function. Each segment must pass a validity test (e.g., based on variance, range, etc.). The algorithm minimizes a quadratic cost subject to this constraint.
+#'
+#' @param data A numeric vector representing the univariate signal to be segmented.
+#' @param gamma A numeric value used as a threshold in the validation function and as a penalty for each segment.
+#' @param test A function of the form `function(data, gamma)` returning TRUE if the segment is valid. Default is `valid_OP`.
+#' @param prune_if_unvalid Logical. If TRUE (default), the algorithm applies *segment-wise validation*:
+#' at each time step, it tests whether the candidate segment \code{data[(s+1):t]} is valid using the
+#' user-defined function \code{test}. If the segment fails the test, the candidate \code{s} is removed
+#' (pruned) from the set of possible changepoints. This accelerates computation by avoiding invalid
+#' segment extensions. If FALSE, the algorithm skips this validation and considers all candidate
+#' segments without checking their validity (which can be faster but may return invalid segments).
+#'
+#' @return A list with the following components :
+#' \describe{
+#'   \item{changepoints}{Integer vector indicating the ending index of each segment (i.e., positions of changepoints).}
+#'  \item{lastIndexSet}{Integer vector containing the non-pruned indices at the end of the algorithm execution}
+#'   \item{nb}{Integer vector of length \code{length(data)}. At each position \code{t}, it records the number of candidates tested.}
+#'   \item{costQ}{Numeric vector of length \code{length(data)}. Quadratic cost value at each time step. Set to NULL as it is recorded into matrix R}
+#'   \item{R}{A matrix of dimension \code{(length(data)+1) x 3} containing, for each time step :
+#'     \describe{
+#'       \item{Q}{cumulative cost}
+#'       \item{K}{number of segments in Q}
+#'       \item{s}{previous changepoint}
+#'     }
+#'   }
+#' }
+#'
+#'
+#' @export
+SVP_old <- function(data, gamma, test, prune_if_unvalid = TRUE) {
+    .Call(`_svpChange_SVP_old`, data, gamma, test, prune_if_unvalid)
 }
 
