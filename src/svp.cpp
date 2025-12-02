@@ -7,38 +7,6 @@
 
 using namespace Rcpp;
 
-//' Smallest Valid Partitioning with FOCUS validity test
-//'
-//' @title Smallest Valid Partitioning with Validation and Pruning
-//' @description This function implements a dynamic programming approach to segment a univariate signal into the smallest number of valid segments, according to a user-defined validation function. Each segment must pass a validity test (e.g., based on variance, range, etc.). The algorithm minimizes a quadratic cost subject to this constraint.
-//'
-//' @param data A numeric vector representing the univariate signal to be segmented.
-//' @param gamma A numeric value used as a threshold in the validation function and as a penalty for each segment.
-//' @param test A function of the form `function(data, gamma)` returning TRUE if the segment is valid. Default is `valid_OP`.
-//' @param prune_if_unvalid Logical. If TRUE (default), the algorithm applies *segment-wise validation*:
-//' at each time step, it tests whether the candidate segment \code{data[(s+1):t]} is valid using the
-//' user-defined function \code{test}. If the segment fails the test, the candidate \code{s} is removed
-//' (pruned) from the set of possible changepoints. This accelerates computation by avoiding invalid
-//' segment extensions. If FALSE, the algorithm skips this validation and considers all candidate
-//' segments without checking their validity (which can be faster but may return invalid segments).
-//'
-//' @return A list with the following components :
-//' \describe{
-//'   \item{changepoints}{Integer vector indicating the ending index of each segment (i.e., positions of changepoints).}
-//'  \item{lastIndexSet}{Integer vector containing the non-pruned indices at the end of the algorithm execution}
-//'   \item{nb}{Integer vector of length \code{length(data)}. At each position \code{t}, it records the number of candidates tested.}
-//'   \item{costQ}{Numeric vector of length \code{length(data)}. Quadratic cost value at each time step. Set to NULL as it is recorded into matrix R}
-//'   \item{R}{A matrix of dimension \code{(length(data)+1) x 3} containing, for each time step :
-//'     \describe{
-//'       \item{Q}{cumulative cost}
-//'       \item{K}{number of segments in Q}
-//'       \item{s}{previous changepoint}
-//'     }
-//'   }
-//' }
-//'
-//'
-//' @export
 // [[Rcpp::export]]
 List SVP(std::vector<double> data,
          double gamma,
@@ -47,7 +15,6 @@ List SVP(std::vector<double> data,
 {
   size_t n = data.size();
 
-  // Initialization of elements in the return
   NumericMatrix R(n + 1, 3); // Q, K, s
   R(0, 0) = 0.0;
   R(0, 1) = 0.0;
@@ -55,10 +22,7 @@ List SVP(std::vector<double> data,
 
   std::vector<size_t> nb(n); // nb of candidates examined at each t
 
-  //
-  // PREPROCESSING
-  //
-  // Cumulative sum for optimized calculations
+  // cumulative sums
   std::vector<double> S1(n + 1, 0);
   std::vector<double> S2(n + 1, 0);
   for (size_t i = 0; i < n; i++)
@@ -67,9 +31,7 @@ List SVP(std::vector<double> data,
     S2[i + 1] = S2[i] + data[i] * data[i];
   }
 
-  //
-  // Define a generic initializer for test objects
-  //
+  // factory for tests
   std::function<std::unique_ptr<TestBase>()> newTest;
   if (test == "gaussian_mean")
   {
@@ -83,31 +45,28 @@ List SVP(std::vector<double> data,
   {
     newTest = []() { return std::make_unique<GaussianVariance>(); };
   }
-  // Add more cases here for other tests, e.g.:
-  // else if (test == "bernoulli_mean") {
-  //   newTest = []() { return std::make_unique<BernoulliMean>(); };
-  // }
   else
   {
     stop("Unknown test type");
   }
 
-  //
-  //
-  //
   std::vector<size_t> INDEX = {0};
-  std::vector<size_t> valid_INDEX;  // indices that pass the validity test
+  std::vector<size_t> valid_INDEX;
 
   std::vector<std::unique_ptr<TestBase>> TESTS;
   TESTS.push_back(newTest());
+
+  // track how far each test has been updated (last index applied)
+  std::vector<size_t> LAST_UPDATES;
+  LAST_UPDATES.push_back(0);
 
   double best_Q;
   size_t best_K;
   size_t best_s = 0;
   size_t s;
-  bool valid;         // for validity test
-  double candidate_Q; // for the lex. comparison
-  size_t candidate_K; // for the lex. comparison
+  bool valid;
+  double candidate_Q;
+  size_t candidate_K;
 
   if (prune_if_unvalid == true)
   {
@@ -115,141 +74,102 @@ List SVP(std::vector<double> data,
     {
       nb[t - 1] = INDEX.size();
 
-      // Initialization
       best_Q = std::numeric_limits<double>::infinity();
       best_K = std::numeric_limits<size_t>::max();
 
-      ///
-      /// the elements to be saved
-      ///
-      valid_INDEX.clear(); // set to length 0 this vector, fill it with valid indices
-      std::vector<std::unique_ptr<TestBase>> valid_TESTS; // to IMPROVE
-
-      // this variable is needed to track whether we had invalid segments in this t iteration
-      // in case, we have to re-update the respective tests for the K+1 segment to catch up to the current t
-      // those were introduced at s, but were not updated because they were invalid at t-1!
-      bool invalid_update = false;
+      valid_INDEX.clear();
+      std::vector<std::unique_ptr<TestBase>> valid_TESTS;
+      std::vector<size_t> valid_LAST_UPDATES;
 
       for (size_t k = 0; k < INDEX.size(); ++k)
       {
         s = INDEX[k];
         auto& test_instance = TESTS[k];
+        size_t last_up = LAST_UPDATES[k];
+
+        // compute candidate_K and possibly skip (safe because instance is up-to-date)
+        candidate_K = static_cast<size_t>(R(s, 1)) + 1;
+        if (candidate_K > best_K) {
+          continue; // no chance to improve lexicographic order
+        }
 
 
-        if (invalid_update && R(s, 1) + 1 == best_K) {
-          // catch up on the updates (we missed some updates because
-          // the instance was not updated for some past t due to pruning)
-          // ensure we update all the missing observations up to the current t
-          for (size_t u = s + 1; u <= t - 1; ++u) {
-            // print updating for debugging
-            // Rcout << "Catching up update for t: " << t << ", s: " << s << ", u: " << u << std::endl;
+        // catch up this instance up to current t (so statistic() is correct)
+        if (last_up < t) {
+          for (size_t u = last_up + 1; u <= t; ++u) {
             test_instance->update(data[u - 1]);
           }
+          last_up = t;
         }
 
-        // update only if this candidate s belongs to the the smallest K found so far
-        if (R(s, 1) + 1 <= best_K) {
-            // print updating for debugging
-            // Rcout << "Updating test instance for t: " << t << ", s: " << s << " R(s,1)+1: " << R(s,1) << " < best_K: " << best_K << std::endl;
-             
-            test_instance->update(data[t - 1]);
-        }
+        candidate_Q = R(s, 0) + (S2[t] - S2[s]) - (S1[t] - S1[s]) * (S1[t] - S1[s]) / (t - s);
+        candidate_K = static_cast<size_t>(R(s, 1)) + 1;
+
+        // evaluate validity (using up-to-date stats)
         valid = test_instance->statistic() < gamma;
 
-        if (valid == true)
+        if (valid)
         {
-          ////
-          //// save the s and the instance
-          ////
           valid_INDEX.push_back(s);
           valid_TESTS.push_back(std::move(test_instance));
-
-          candidate_Q = R(s, 0) + (S2[t] - S2[s]) - (S1[t] - S1[s]) * (S1[t] - S1[s]) / (t - s);
-          candidate_K = R(s, 1) + 1;
-
-          // print the s and the candidate_K and candidate_Q for debugging
-          // Rcout << "t: " << t << ", s: " << s << ", candidate_K: " << candidate_K << ", candidate_Q: " << candidate_Q << std::endl;
-
-          if (candidate_K < best_K || (candidate_K == best_K && candidate_Q < best_Q))
-          {
-            // Rcout << "BEST CANDIDATE AT t: " << t << ", s: " << s << ", candidate_K: " << candidate_K << ", candidate_Q: " << candidate_Q << std::endl;
-            best_Q = candidate_Q;
-            best_K = candidate_K;
-            best_s = s - 1;
-          }
-          if (candidate_K > best_K) {
-            // print skipping for debugging
-            // Rcout << "Skipping further candidates for t: " << t << " since candidate_K: " << candidate_K << " > best_K: " << best_K << std::endl;
-            // K is not better; we want to skip searching other candidates for this `t`.
-            // Set flag to skip to the next `t` iteration and break the inner loop.
-            break;
-          }
+          valid_LAST_UPDATES.push_back(last_up);
 
 
-        } else {
-          // print invalid segment for debugging
-          // Rcout << "t: " << t << ", s: " << s << ", K: " << R(s, 1) + 1 << " is invalid." << std::endl;
-          // print the test statistics for debugging
-          // Rcout << "Test statistic: " << test_instance->statistic() << ", gamma: " << gamma << std::endl;
-
-          candidate_Q = R(s, 0) + (S2[t] - S2[s]) - (S1[t] - S1[s]) * (S1[t] - S1[s]) / (t - s);
-          candidate_K = R(s, 1) + 1;
-
-          // print the s and the candidate_K and candidate_Q for debugging
-          // // Rcout << "t: " << t << ", s: " << s << ", candidate_K: " << candidate_K << ", candidate_Q: " << candidate_Q << std::endl;
 
           if (candidate_K < best_K || (candidate_K == best_K && candidate_Q < best_Q))
           {
             best_Q = candidate_Q;
             best_K = candidate_K;
-            best_s = s - 1;
+            best_s = s;
           }
-
-          invalid_update = true;
-          
         }
+        // else: pruned (do not use invalid candidates to update best_*)
       }
+
+
       R(t, 0) = best_Q;
       R(t, 1) = best_K;
       R(t, 2) = best_s;
 
-      //
-      //  PRUNING if prune_if_unvalid == true
-      //
-      INDEX.swap(valid_INDEX); // index now contains the valid_INDEX only
+      // replace with kept valid lists and add new entry for s = t
+      INDEX.swap(valid_INDEX);
       TESTS = std::move(valid_TESTS);
+      LAST_UPDATES = std::move(valid_LAST_UPDATES);
+
       TESTS.push_back(newTest());
+      LAST_UPDATES.push_back(t); // new test is up-to-date to index t (no obs applied)
       INDEX.push_back(t);
     }
-  } ////////////////////////////////////////////////////////////////////////////////
-  else ///////////////////////////////////////////////////////////////////////////
-  { ////////////////////////////////////////////////////////////////////////////////
-    // NOTE : This branch is never used in the current implementation
-    // IT COULD BE POTENTIALLY BROKEN SINCE A BUG FIX WAS APPLIED ONLY IN THE PRUNING BRANCH
+  }
+  else
+  {
+    // Non-pruning branch kept consistent with LAST_UPDATES maintenance
     for (size_t t = 1; t < n + 1; ++t)
     {
       nb[t - 1] = INDEX.size();
 
-      // Initialization
       best_Q = std::numeric_limits<double>::infinity();
       best_K = std::numeric_limits<size_t>::max();
-
-      ///
-      /// the elements to be saved
-      ///
 
       for (size_t k = 0; k < INDEX.size(); ++k)
       {
         s = INDEX[k];
         auto& test_instance = TESTS[k];
 
-        test_instance->update(data[t - 1]);
+        size_t last_up = LAST_UPDATES[k];
+        if (last_up < t) {
+          for (size_t u = last_up + 1; u <= t; ++u) {
+            test_instance->update(data[u - 1]);
+          }
+          LAST_UPDATES[k] = t;
+        }
+
         valid = test_instance->statistic() < gamma;
 
         if (valid == true)
         {
           candidate_Q = R(s, 0) + (S2[t] - S2[s]) - (S1[t] - S1[s]) * (S1[t] - S1[s]) / (t - s);
-          candidate_K = R(s, 1) + 1;
+          candidate_K = static_cast<size_t>(R(s, 1)) + 1;
 
           if (candidate_K < best_K || (candidate_K == best_K && candidate_Q < best_Q))
           {
@@ -263,19 +183,13 @@ List SVP(std::vector<double> data,
       R(t, 1) = best_K;
       R(t, 2) = best_s;
 
-      //
-      //  PRUNING if prune_if_unvalid == true
-      //
       TESTS.push_back(newTest());
+      LAST_UPDATES.push_back(t);
       INDEX.push_back(t);
     }
   }
 
-  ////////////////////////////////////////////////////////////////////////////////
-  //
   // BACKTRACKING
-  //
-  // Change points reconstruction
   std::vector<size_t> changepoints;
   size_t i = n;
   while (i > 0)
