@@ -76,6 +76,20 @@ BEGIN_RCPP
     return rcpp_result_gen;
 END_RCPP
 }
+// SVP_new
+List SVP_new(std::vector<double> data, double gamma, std::string test, bool prune_if_unvalid);
+RcppExport SEXP _svpChange_SVP_new(SEXP dataSEXP, SEXP gammaSEXP, SEXP testSEXP, SEXP prune_if_unvalidSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< std::vector<double> >::type data(dataSEXP);
+    Rcpp::traits::input_parameter< double >::type gamma(gammaSEXP);
+    Rcpp::traits::input_parameter< std::string >::type test(testSEXP);
+    Rcpp::traits::input_parameter< bool >::type prune_if_unvalid(prune_if_unvalidSEXP);
+    rcpp_result_gen = Rcpp::wrap(SVP_new(data, gamma, test, prune_if_unvalid));
+    return rcpp_result_gen;
+END_RCPP
+}
 
 static const R_CallMethodDef CallEntries[] = {
     {"_svpChange_OP", (DL_FUNC) &_svpChange_OP, 2},
@@ -83,6 +97,7 @@ static const R_CallMethodDef CallEntries[] = {
     {"_svpChange_SN", (DL_FUNC) &_svpChange_SN, 2},
     {"_svpChange_SVP", (DL_FUNC) &_svpChange_SVP, 4},
     {"_svpChange_svp0", (DL_FUNC) &_svpChange_svp0, 5},
+    {"_svpChange_SVP_new", (DL_FUNC) &_svpChange_SVP_new, 4},
     {NULL, NULL, 0}
 };
 
