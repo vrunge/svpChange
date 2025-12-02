@@ -82,7 +82,7 @@ List SVP(std::vector<double> data,
   else if (test == "gaussian_variance")
   {
     newTest = []() { return std::make_unique<GaussianVariance>(); };
-  }  
+  }
   // Add more cases here for other tests, e.g.:
   // else if (test == "bernoulli_mean") {
   //   newTest = []() { return std::make_unique<BernoulliMean>(); };
@@ -135,18 +135,23 @@ List SVP(std::vector<double> data,
         s = INDEX[k];
         auto& test_instance = TESTS[k];
 
+
         if (invalid_update && R(s, 1) + 1 == best_K) {
           // catch up on the updates (we missed some updates because
           // the instance was not updated for some past t due to pruning)
           // ensure we update all the missing observations up to the current t
-          // NOTE: use <= t-1 so we include the last observation at index t-1
-          for (size_t u = s + 1; u <= t; ++u) {
+          for (size_t u = s + 1; u <= t - 1; ++u) {
+            // print updating for debugging
+            // Rcout << "Catching up update for t: " << t << ", s: " << s << ", u: " << u << std::endl;
             test_instance->update(data[u - 1]);
           }
         }
-        
+
         // update only if this candidate s belongs to the the smallest K found so far
-        if (R(s, 1) + 1 < best_K) {
+        if (R(s, 1) + 1 <= best_K) {
+            // print updating for debugging
+            // Rcout << "Updating test instance for t: " << t << ", s: " << s << " R(s,1)+1: " << R(s,1) << " < best_K: " << best_K << std::endl;
+             
             test_instance->update(data[t - 1]);
         }
         valid = test_instance->statistic() < gamma;
@@ -167,9 +172,10 @@ List SVP(std::vector<double> data,
 
           if (candidate_K < best_K || (candidate_K == best_K && candidate_Q < best_Q))
           {
+            // Rcout << "BEST CANDIDATE AT t: " << t << ", s: " << s << ", candidate_K: " << candidate_K << ", candidate_Q: " << candidate_Q << std::endl;
             best_Q = candidate_Q;
             best_K = candidate_K;
-            best_s = s;
+            best_s = s - 1;
           }
           if (candidate_K > best_K) {
             // print skipping for debugging
@@ -182,9 +188,22 @@ List SVP(std::vector<double> data,
 
         } else {
           // print invalid segment for debugging
-          Rcout << "t: " << t << ", s: " << s << ", K: " << R(s, 1) + 1 << " is invalid." << std::endl;
+          // Rcout << "t: " << t << ", s: " << s << ", K: " << R(s, 1) + 1 << " is invalid." << std::endl;
           // print the test statistics for debugging
-          Rcout << "Test statistic: " << test_instance->statistic() << ", gamma: " << gamma << std::endl;
+          // Rcout << "Test statistic: " << test_instance->statistic() << ", gamma: " << gamma << std::endl;
+
+          candidate_Q = R(s, 0) + (S2[t] - S2[s]) - (S1[t] - S1[s]) * (S1[t] - S1[s]) / (t - s);
+          candidate_K = R(s, 1) + 1;
+
+          // print the s and the candidate_K and candidate_Q for debugging
+          // // Rcout << "t: " << t << ", s: " << s << ", candidate_K: " << candidate_K << ", candidate_Q: " << candidate_Q << std::endl;
+
+          if (candidate_K < best_K || (candidate_K == best_K && candidate_Q < best_Q))
+          {
+            best_Q = candidate_Q;
+            best_K = candidate_K;
+            best_s = s - 1;
+          }
 
           invalid_update = true;
           
