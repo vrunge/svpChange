@@ -125,29 +125,31 @@ List SVP(std::vector<double> data,
       valid_INDEX.clear(); // set to length 0 this vector, fill it with valid indices
       std::vector<std::unique_ptr<TestBase>> valid_TESTS; // to IMPROVE
 
+      // this variable is needed to track whether we had invalid segments in this t iteration
+      // in case, we have to re-update the respective tests for the K+1 segment to catch up to the current t
+      // those were introduced at s, but were not updated because they were invalid at t-1!
+      bool invalid_update = false;
+
       for (size_t k = 0; k < INDEX.size(); ++k)
       {
         s = INDEX[k];
         auto& test_instance = TESTS[k];
 
-        test_instance->update(data[t - 1]);
+        if (invalid_update && R(s, 1) + 1 == best_K) {
+          // catch up on the updates (we missed some updates because
+          // the instance was not updated for some past t due to pruning)
+          // ensure we update all the missing observations up to the current t
+          // NOTE: use <= t-1 so we include the last observation at index t-1
+          for (size_t u = s + 1; u <= t; ++u) {
+            test_instance->update(data[u - 1]);
+          }
+        }
+        
+        // update only if this candidate s belongs to the the smallest K found so far
+        if (R(s, 1) + 1 < best_K) {
+            test_instance->update(data[t - 1]);
+        }
         valid = test_instance->statistic() < gamma;
-
-        // TO DO to GET THE LINEAR COMPLEXITY
-        //
-        // NOT POSSIBLE YET because of test_instance->update(data[t - 1]);
-        // we need to postpone the update step, and do a O(1) time chunck update
-        //
-        //candidate_K = R(s, 1) + 1;
-        //if (best_K != std::numeric_limits<size_t>::max() && candidate_K > best_K)
-        //{
-        //  valid_INDEX.insert(valid_INDEX.end(),
-        //                     INDEX.begin() + k + 1 , INDEX.end());
-        //  valid_TESTS.insert(valid_TESTS.end(),
-        //                     std::make_move_iterator(TESTS.begin() + k + 1),
-        //                     std::make_move_iterator(TESTS.end()));
-        //  break;
-        //}
 
         if (valid == true)
         {
@@ -160,12 +162,32 @@ List SVP(std::vector<double> data,
           candidate_Q = R(s, 0) + (S2[t] - S2[s]) - (S1[t] - S1[s]) * (S1[t] - S1[s]) / (t - s);
           candidate_K = R(s, 1) + 1;
 
+          // print the s and the candidate_K and candidate_Q for debugging
+          // Rcout << "t: " << t << ", s: " << s << ", candidate_K: " << candidate_K << ", candidate_Q: " << candidate_Q << std::endl;
+
           if (candidate_K < best_K || (candidate_K == best_K && candidate_Q < best_Q))
           {
             best_Q = candidate_Q;
             best_K = candidate_K;
             best_s = s;
           }
+          if (candidate_K > best_K) {
+            // print skipping for debugging
+            // Rcout << "Skipping further candidates for t: " << t << " since candidate_K: " << candidate_K << " > best_K: " << best_K << std::endl;
+            // K is not better; we want to skip searching other candidates for this `t`.
+            // Set flag to skip to the next `t` iteration and break the inner loop.
+            break;
+          }
+
+
+        } else {
+          // print invalid segment for debugging
+          Rcout << "t: " << t << ", s: " << s << ", K: " << R(s, 1) + 1 << " is invalid." << std::endl;
+          // print the test statistics for debugging
+          Rcout << "Test statistic: " << test_instance->statistic() << ", gamma: " << gamma << std::endl;
+
+          invalid_update = true;
+          
         }
       }
       R(t, 0) = best_Q;
@@ -183,6 +205,8 @@ List SVP(std::vector<double> data,
   } ////////////////////////////////////////////////////////////////////////////////
   else ///////////////////////////////////////////////////////////////////////////
   { ////////////////////////////////////////////////////////////////////////////////
+    // NOTE : This branch is never used in the current implementation
+    // IT COULD BE POTENTIALLY BROKEN SINCE A BUG FIX WAS APPLIED ONLY IN THE PRUNING BRANCH
     for (size_t t = 1; t < n + 1; ++t)
     {
       nb[t - 1] = INDEX.size();
