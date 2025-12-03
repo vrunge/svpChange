@@ -179,7 +179,8 @@ run_power_study <- function(n = 1000,
           Recall = c(metrics_pelt$Recall, metrics_svp$Recall, metrics_svp_bic$Recall),
           F1 = c(metrics_pelt$F1, metrics_svp$F1, metrics_svp_bic$F1),
           NumSegments = c(nseg_pelt, nseg_svp, nseg_svp_bic),
-          MSE = c(mse_pelt, mse_svp, mse_svp_bic)
+          MSE = c(mse_pelt, mse_svp, mse_svp_bic),
+          changepoints = list(cp_pelt, cp_svp, cp_svp_bic)
         )
         tib
       }, simplify = FALSE)
@@ -195,9 +196,13 @@ run_power_study <- function(n = 1000,
   # Add rep id
   df <- df %>% group_by(pattern, jump, algorithm) %>% mutate(rep = row_number()) %>% ungroup()
 
+  # Save a version without the list-column for inspection (drop changepoints for CSV export)
+  df_csv <- df %>% select(-changepoints)
   out_path <- file.path("simulations", "power_study_results.csv")
-  write.csv(df, out_path, row.names = FALSE)
+  write.csv(df_csv, out_path, row.names = FALSE)
   message("Saved results to: ", out_path)
+  
+  # Return the full df with changepoints intact for use in plotting
   df
 }
 
@@ -270,21 +275,95 @@ plot_scenarios <- function(n = 10000, jumpSize = 3, nbSeg = 8) {
 }
 
 
+plot_changepoint_distributions <- function(df, n_bins = 50, selected_jumpsize = 2) {
+  # df should have columns: pattern, algorithm, jump, rep, changepoints (list-column)
+  # Extract all changepoints across all replicates and create a histogram
+  
+  dir.create(file.path("simulations", "plots"), recursive = TRUE, showWarnings = FALSE)
+  
+  # Unnest changepoints and exclude the final boundary point (end of sequence)
+  cp_data_list <- list()
+  for (i in seq_len(nrow(df))) {
+    row <- df[i, ]
+    cps <- unlist(row$changepoints[[1]])
+    pattern <- row$pattern
+    algorithm <- row$algorithm
+    
+    # Exclude the final boundary point
+    cps_interior <- cps[cps < 1000]  # assuming sequence length is 1000
+    
+    if (length(cps_interior) > 0) {
+      cp_df <- data.frame(
+        pattern = pattern,
+        algorithm = algorithm,
+        changepoint = cps_interior,
+        jump = row$jump
+      )
+      cp_data_list[[length(cp_data_list) + 1]] <- cp_df
+    }
+  }
+  
+  if (length(cp_data_list) > 0) {
+    cp_all <- do.call(rbind, cp_data_list)
+    rownames(cp_all) <- NULL
+    
+    # Create histogram with ggplot2
+    p <- ggplot(cp_all |> filter(jump %in% selected_jumpsize, pattern != "none"), aes(x = changepoint)) +
+      geom_histogram(bins = n_bins, fill = "steelblue", alpha = 0.7, color = "black") +
+      facet_grid(pattern ~ algorithm) +
+      geom_vline(xintercept = seq(125, 875, by = 125), linetype = "dashed", color = "grey") +
+      labs(x = "Sequence Position (Time)",
+           y = "Frequency of Detected Change") +
+      theme_minimal() +
+      theme(axis.text.x = element_text(angle = 45, hjust = 1))
+    
+    out <- file.path("simulations", "plots", "changepoint_distributions.pdf")
+    ggsave(filename = out, plot = p, width = 14, height = 10)
+    message("Saved plot: ", out)
+    p
+  } else {
+    message("No changepoints detected in any simulation.")
+    NULL
+  }
+}
+
+
+
 ## Self-contained run & plot
 DO_RUN <- TRUE
 DO_PLOT <- TRUE
 
 if (DO_RUN) {
-  df <- run_power_study(n = 1000, patterns = c("none", "up", "updown", "rand1"), jumpSizes = seq(0.1, 2, by = 0.1), reps = 50)
+  df <- run_power_study(n = 1000, patterns = c("none", "up", "updown", "rand1"), jumpSizes = c(seq(0.1, 2, by = 0.1)), reps = 50)
 }
 
 if (DO_PLOT) {
   if (!exists("df")) {
-    path <- file.path("simulations", "power_study_results.csv")
-    if (file.exists(path)) df <- read.csv(path)
+    # Try to load from an RDS file that preserves the list-column
+    rds_path <- file.path("simulations", "power_study_results.rds")
+    csv_path <- file.path("simulations", "power_study_results.csv")
+    if (file.exists(rds_path)) {
+      df <- readRDS(rds_path)
+      message("Loaded results from RDS: ", rds_path)
+    } else if (file.exists(csv_path)) {
+      message("Warning: CSV file found but it doesn't contain changepoints.")
+      message("To generate plots with changepoint distributions, please re-run with DO_RUN=TRUE")
+      df <- read.csv(csv_path)
+    } else {
+      stop("No results file found. Please run with DO_RUN=TRUE first.")
+    }
+  } else {
+    # Save the full df with changepoints to RDS for future reloading
+    rds_path <- file.path("simulations", "power_study_results.rds")
+    saveRDS(df, rds_path)
+    message("Saved full results (with changepoints) to: ", rds_path)
   }
+  
   plot_power_metrics(df)
   plot_scenarios(n = 1000, jumpSize = 0.75, nbSeg = 8)
+  
+  plot_changepoint_distributions(df, n_bins = 100, selected_jumpsize = 0.6)
+
 }
 
 ## End
