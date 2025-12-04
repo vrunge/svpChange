@@ -6,8 +6,8 @@
         "-I/opt/R/arm64/include",
         "-fPIC",
         "-falign-functions=64",
-        "-I/Library/Frameworks/R.framework/Versions/4.4-arm64/Resources/library/Rcpp/include",
-        "-I/Library/Frameworks/R.framework/Versions/4.4-arm64/Resources/library/RcppArmadillo/include",
+        "-I/Library/Frameworks/R.framework/Versions/4.5-arm64/Resources/library/Rcpp/include",
+        "-I/Library/Frameworks/R.framework/Versions/4.5-arm64/Resources/library/RcppArmadillo/include",
         "-DEIGEN_DONT_VECTORIZE",
         "-I/Library/Developer/CommandLineTools/usr/lib/clang/17.0.0/include",
         "-I/Library/Developer/CommandLineTools/usr/bin/../include/c++/v1",
@@ -17,8 +17,8 @@
     ],
     "pch": "RcppArmadillo",
     "is_cpp": true,
-    "hash": "1755593561",
-    "compiler": "10728779820117804553",
-    "rversion": "4.4.2",
+    "hash": "1764838557",
+    "compiler": "6541440713598565200",
+    "rversion": "4.5.2",
     "dbversion": 4
 }
