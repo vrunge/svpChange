@@ -25,6 +25,7 @@ time_and_count_pelt <- function(data, penalty) {
   if (!is.null(obj)) {
     ch <- tryCatch(cpts(obj), error = function(e) NULL)
     res$nchanges <- if (!is.null(ch)) length(as.integer(unlist(ch))) else NA_integer_
+    res$nchanges <- res$nchanges + 1 # including the last point at n 
   }
   res
 }
@@ -47,7 +48,7 @@ time_and_count_svp <- function(data, penalty, cost = "gaussian_mean") {
 ## Experiment 1: no-change signals
 run_exp1 <- function(n_values = round(seq(500, 10000, length.out = 20)),
                      reps = 20,
-                     penalty_large = 100,
+                     penalty_large = 1000,
                      seed = 123) {
   set.seed(seed)
 

@@ -36,6 +36,7 @@ generate_signal <- function(n, pattern = c("none", "up", "updown", "rand1"), nbS
 
     set.seed(43)
     rand1Jump <- runif(nbSeg, min = 0.5, max = 1) * sample(c(-1, 1), nbSeg, replace = TRUE)
+    set.seed(NULL)
   }
 
   switch(
