@@ -106,7 +106,7 @@ run_robust_power_study <- function(n = 1000,
         cp_true <- c(which(diff(mu) != 0), length(mu))
 
         # penalties
-        penalty_pelt <- 3 * log(n)
+        penalty_pelt <- 2 * log(n)
 
         # run PELT
         obj_pelt <- tryCatch(cpt.mean(y, method = "PELT", penalty = "Manual", pen.value = penalty_pelt), error = function(e) NULL)
@@ -153,7 +153,7 @@ run_robust_power_study <- function(n = 1000,
         res_rfpop <- tryCatch({
           Rob_seg.std(x = y / est_sd, 
                      loss = "Outlier",
-                     lambda = 3 * log(length(y)),
+                     lambda = 2 * log(length(y)),
                      lthreshold = 3)
         }, error = function(e) NULL)
         
@@ -194,23 +194,23 @@ run_robust_power_study <- function(n = 1000,
 
   # flatten: produce one data.frame from the nested list of tibbles
   all_reps <- unlist(res_list, recursive = FALSE)
-  df <- dplyr::bind_rows(all_reps)
+  results_df <- dplyr::bind_rows(all_reps)
 
   # Add rep id
-  df <- df %>% group_by(pattern, jump, algorithm) %>% mutate(rep = row_number()) %>% ungroup()
+  results_df <- results_df %>% group_by(pattern, jump, algorithm) %>% mutate(rep = row_number()) %>% ungroup()
 
   # Save a version without the list-column for inspection (drop changepoints for CSV export)
-  df_csv <- df %>% select(-changepoints)
+  results_csv <- results_df %>% select(-changepoints)
   out_path <- file.path("simulations", "power_study_robust_heavy_tails_results.csv")
-  write.csv(df_csv, out_path, row.names = FALSE)
+  write.csv(results_csv, out_path, row.names = FALSE)
   message("Saved results to: ", out_path)
   
-  # Return the full df with changepoints intact for use in plotting
-  df
+  # Return the full results_df with changepoints intact for use in plotting
+  results_df
 }
 
 
-plot_robust_power_metrics <- function(df) {
+plot_robust_power_metrics <- function(results_df) {
   dir.create(file.path("simulations", "plots_robust_heavy_tails"), recursive = TRUE, showWarnings = FALSE)
 
   summarise_ci <- function(d) {
@@ -223,7 +223,7 @@ plot_robust_power_metrics <- function(df) {
                     .groups = "drop")
   }
 
-  long <- df %>% pivot_longer(cols = c(Precision, Recall, F1, NumSegments, MSE), names_to = "metric", values_to = "value")
+  long <- results_df %>% pivot_longer(cols = c(Precision, Recall, F1, NumSegments, MSE), names_to = "metric", values_to = "value")
   # Ensure pattern is a factor with consistent levels
   long$pattern <- factor(long$pattern, levels = c("none", "up", "updown", "rand1"))
 
@@ -277,16 +277,16 @@ plot_robust_scenarios <- function(n = 1000, jumpSize = 0.75, nbSeg = 8) {
 }
 
 
-plot_robust_changepoint_distributions <- function(df, n_bins = 50, selected_jumpsize = 0.6) {
-  # df should have columns: pattern, algorithm, jump, rep, changepoints (list-column)
+plot_robust_changepoint_distributions <- function(results_df, n_bins = 50, selected_jumpsize = 0.6) {
+  # results_df should have columns: pattern, algorithm, jump, rep, changepoints (list-column)
   # Extract all changepoints across all replicates and create a histogram
   
   dir.create(file.path("simulations", "plots_robust_heavy_tails"), recursive = TRUE, showWarnings = FALSE)
   
   # Unnest changepoints and exclude the final boundary point (end of sequence)
   cp_data_list <- list()
-  for (i in seq_len(nrow(df))) {
-    row <- df[i, ]
+  for (i in seq_len(nrow(results_df))) {
+    row <- results_df[i, ]
     cps <- unlist(row$changepoints[[1]])
     pattern <- row$pattern
     algorithm <- row$algorithm
@@ -335,37 +335,32 @@ DO_RUN <- TRUE
 DO_PLOT <- TRUE
 
 if (DO_RUN) {
-  df <- run_robust_power_study(n = 1000, 
-                               patterns = c("none", "up", "updown", "rand1"), 
-                               jumpSizes = seq(0.1, 2, by = 0.1), 
-                               reps = 100)
+  results_df <- run_robust_power_study(n = 1000, 
+                                       patterns = c("none", "up", "updown", "rand1"), 
+                                       jumpSizes = seq(0.1, 4, by = 0.1), 
+                                       reps = 100)
 }
 
 if (DO_PLOT) {
-  if (!exists("df")) {
+  if (!exists("results_df")) {
     # Try to load from an RDS file that preserves the list-column
     rds_path <- file.path("simulations", "power_study_robust_heavy_tails_results.rds")
     csv_path <- file.path("simulations", "power_study_robust_heavy_tails_results.csv")
     if (file.exists(rds_path)) {
-      df <- readRDS(rds_path)
+      results_df <- readRDS(rds_path)
       message("Loaded results from RDS: ", rds_path)
     } else if (file.exists(csv_path)) {
       message("Warning: CSV file found but it doesn't contain changepoints.")
       message("To generate plots with changepoint distributions, please re-run with DO_RUN=TRUE")
-      df <- read.csv(csv_path)
+      results_df <- read.csv(csv_path)
     } else {
       stop("No results file found. Please run with DO_RUN=TRUE first.")
     }
-  } else {
-    # Save the full df with changepoints to RDS for future reloading
-    rds_path <- file.path("simulations", "power_study_robust_heavy_tails_results.rds")
-    saveRDS(df, rds_path)
-    message("Saved full results (with changepoints) to: ", rds_path)
   }
   
-  plot_robust_power_metrics(df)
+  plot_robust_power_metrics(results_df)
   plot_robust_scenarios(n = 1000, jumpSize = 0.6, nbSeg = 8)
-  plot_robust_changepoint_distributions(df, n_bins = 100, selected_jumpsize = 0.6)
+  plot_robust_changepoint_distributions(results_df, n_bins = 100, selected_jumpsize = 2)
 }
 
 ## End
