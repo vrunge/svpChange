@@ -47,7 +47,7 @@ time_and_count_svp <- function(data, penalty, cost = "gaussian_mean") {
 ## Experiment 1: no-change signals
 run_exp1 <- function(n_values = round(seq(500, 10000, length.out = 20)),
                      reps = 20,
-                     penalty_large = 1e100,
+                     penalty_large = 100,
                      seed = 123) {
   set.seed(seed)
 
@@ -143,7 +143,7 @@ if (DO_RUN) {
 
   ## WARNING: these runs can be time-consuming. Adjust reps/k_values/workers as needed.
   message("[complexity_study] Running Experiment 1 (no-change scaling) ...")
-  df1 <- run_exp1(n_values = round(seq(500, 20000, length.out = 20)), reps = 20)
+  df1 <- run_exp1(n_values = round(2^(seq(10, 14, length.out = 20))), reps = 20)
 
   message("[complexity_study] Running Experiment 2 (varying k) ...")
   df2 <- run_exp2(n = 10000, k_values = 0:100, reps = 10, gap = 10)
@@ -168,14 +168,40 @@ if (DO_PLOT) {
 
   # Plot for Experiment 1: mean time vs n (log-log)
   if (exists("df1") && nrow(df1) > 0) {
-    p1 <- ggplot(df1, aes(x = n, y = PELT, color = "PELT", fill = "PELT")) +
+    # Remove NA, NaN, or Inf values before fitting
+    df1_clean <- df1[is.finite(df1$PELT) & is.finite(df1$SVP) & 
+                      df1$PELT > 0 & df1$SVP > 0, ]
+    
+    # Calculate slopes for PELT and SVP on log-log scale
+    if (nrow(df1_clean) > 2) {
+      fit_pelt <- lm(log(PELT) ~ log(n), data = df1_clean)
+      fit_svp <- lm(log(SVP) ~ log(n), data = df1_clean)
+      slope_pelt <- round(coef(fit_pelt)[2], 3)
+      slope_svp <- round(coef(fit_svp)[2], 3)
+    } else {
+      warning("Not enough valid data points to fit slopes")
+      slope_pelt <- NA
+      slope_svp <- NA
+    }
+    
+    p1 <- ggplot(df1, aes(x = n, y = PELT, color = "PELT")) +
       geom_smooth(method = "lm", formula = y ~ x, se = TRUE, alpha = 0.2) +
-      geom_smooth(data = df1, aes(x = n, y = SVP, color = "SVP", fill = "SVP"), 
+      geom_smooth(data = df1, aes(x = n, y = SVP, color = "SVP"), 
                   method = "lm", formula = y ~ x, se = TRUE, alpha = 0.2) +
       scale_x_log10() + scale_y_log10() +
       labs(x = "n (log)", y = "Time (s, log)") +
       theme_minimal()
-    ggsave(filename = file.path("simulations", "plots", "exp1_time_vs_n.png"), plot = p1, width = 8, height = 5)
+    
+    # Add slope annotations if valid
+    if (!is.na(slope_pelt)) {
+      p1 <- p1 + annotate("text", x = Inf, y = Inf, label = paste("PELT slope:", slope_pelt), 
+                          hjust = 1.1, vjust = 20, color = "#F8766D", size = 4)
+    }
+    if (!is.na(slope_svp)) {
+      p1 <- p1 + annotate("text", x = Inf, y = Inf, label = paste("SVP slope:", slope_svp), 
+                          hjust = 1.1, vjust = 22, color = "#00BFC4", size = 4)
+    }
+    ggsave(filename = file.path("simulations", "plots", "exp1_time_vs_n.pdf"), plot = p1, width = 8, height = 5)
     message("[complexity_study] Saved plot: simulations/plots/exp1_time_vs_n.png")
   } else {
     message("[complexity_study] No data for Experiment 1 plotting (df1 missing).")
@@ -183,13 +209,13 @@ if (DO_PLOT) {
 
   # Plot for Experiment 2: mean time vs k
   if (exists("df2") && nrow(df2) > 0) {
-    p2 <- ggplot(df2, aes(x = k, y = PELT, color = "PELT", fill = "PELT")) +
+    p2 <- ggplot(df2, aes(x = k, y = PELT, color = "PELT")) +
       geom_smooth(method = "loess", se = TRUE, alpha = 0.2) +
-      geom_smooth(data = df2, aes(x = k, y = SVP, color = "SVP", fill = "SVP"), 
+      geom_smooth(data = df2, aes(x = k, y = SVP, color = "SVP"), 
                   method = "loess", se = TRUE, alpha = 0.2) +
       labs(x = "Number of changepoints (k)", y = "Time (s)") +
       theme_minimal()
-    ggsave(filename = file.path("simulations", "plots", "exp2_time_vs_k.png"), plot = p2, width = 8, height = 5)
+    ggsave(filename = file.path("simulations", "plots", "exp2_time_vs_k.pdf"), plot = p2, width = 8, height = 5)
     message("[complexity_study] Saved plot: simulations/plots/exp2_time_vs_k.png")
   } else {
     message("[complexity_study] No data for Experiment 2 plotting (df2 missing).")
@@ -223,7 +249,7 @@ if (DO_PLOT) {
       labs(x = "Detected number of changes",
            y = "Time (s, log)") +
       theme_minimal()
-    ggsave(filename = file.path("simulations", "plots", "time_vs_detected_changes.png"), plot = p3, width = 8, height = 5)
+    ggsave(filename = file.path("simulations", "plots", "time_vs_detected_changes.pdf"), plot = p3, width = 8, height = 5)
     message("[complexity_study] Saved plot: simulations/plots/time_vs_detected_changes.png")
   } else {
     message("[complexity_study] No data available to plot runtime vs detected changes.")
