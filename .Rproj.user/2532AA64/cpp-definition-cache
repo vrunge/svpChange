@@ -345,6 +345,12 @@
         "hidden": false
     },
     {
+        "file": "/Users/vrunge/Dropbox/Mon Mac (pc-20.home)/Desktop/Rpackages/svpChange/src/svp_costTests.cpp",
+        "file_last_write": 1764848144.0,
+        "definitions": [],
+        "hidden": false
+    },
+    {
         "file": "/Users/vrunge/Dropbox/Mon Mac (pc-20.home)/Desktop/Rpackages/svpChange/src/svp_old.cpp",
         "file_last_write": 1764837911.0,
         "definitions": [
@@ -363,7 +369,7 @@
     },
     {
         "file": "/Users/vrunge/Dropbox/Mon Mac (pc-20.home)/Desktop/Rpackages/svpChange/src/tests.h",
-        "file_last_write": 1764838786.0,
+        "file_last_write": 1764848366.0,
         "definitions": [
             {
                 "usr": "c:@S@TestBase",
@@ -371,7 +377,7 @@
                 "parent_name": "",
                 "name": "TestBase",
                 "file": "/Users/vrunge/Dropbox/Mon Mac (pc-20.home)/Desktop/Rpackages/svpChange/src/tests.h",
-                "line": 11,
+                "line": 10,
                 "column": 7,
                 "hidden": false
             },
@@ -381,7 +387,7 @@
                 "parent_name": "",
                 "name": "GaussianMean",
                 "file": "/Users/vrunge/Dropbox/Mon Mac (pc-20.home)/Desktop/Rpackages/svpChange/src/tests.h",
-                "line": 23,
+                "line": 22,
                 "column": 7,
                 "hidden": false
             },
@@ -391,7 +397,7 @@
                 "parent_name": "GaussianMean",
                 "name": "update(double)",
                 "file": "/Users/vrunge/Dropbox/Mon Mac (pc-20.home)/Desktop/Rpackages/svpChange/src/tests.h",
-                "line": 40,
+                "line": 39,
                 "column": 10,
                 "hidden": false
             },
@@ -401,7 +407,7 @@
                 "parent_name": "GaussianMean",
                 "name": "statistic",
                 "file": "/Users/vrunge/Dropbox/Mon Mac (pc-20.home)/Desktop/Rpackages/svpChange/src/tests.h",
-                "line": 45,
+                "line": 44,
                 "column": 12,
                 "hidden": false
             },
@@ -411,7 +417,7 @@
                 "parent_name": "",
                 "name": "GammaRate",
                 "file": "/Users/vrunge/Dropbox/Mon Mac (pc-20.home)/Desktop/Rpackages/svpChange/src/tests.h",
-                "line": 56,
+                "line": 55,
                 "column": 7,
                 "hidden": false
             },
@@ -421,7 +427,7 @@
                 "parent_name": "GammaRate",
                 "name": "update(double)",
                 "file": "/Users/vrunge/Dropbox/Mon Mac (pc-20.home)/Desktop/Rpackages/svpChange/src/tests.h",
-                "line": 74,
+                "line": 73,
                 "column": 10,
                 "hidden": false
             },
@@ -431,7 +437,7 @@
                 "parent_name": "GammaRate",
                 "name": "statistic",
                 "file": "/Users/vrunge/Dropbox/Mon Mac (pc-20.home)/Desktop/Rpackages/svpChange/src/tests.h",
-                "line": 79,
+                "line": 78,
                 "column": 12,
                 "hidden": false
             },
@@ -441,7 +447,7 @@
                 "parent_name": "",
                 "name": "GaussianVariance",
                 "file": "/Users/vrunge/Dropbox/Mon Mac (pc-20.home)/Desktop/Rpackages/svpChange/src/tests.h",
-                "line": 89,
+                "line": 88,
                 "column": 7,
                 "hidden": false
             },
@@ -451,7 +457,7 @@
                 "parent_name": "GaussianVariance",
                 "name": "update(double)",
                 "file": "/Users/vrunge/Dropbox/Mon Mac (pc-20.home)/Desktop/Rpackages/svpChange/src/tests.h",
-                "line": 99,
+                "line": 98,
                 "column": 10,
                 "hidden": false
             },
@@ -461,7 +467,7 @@
                 "parent_name": "GaussianVariance",
                 "name": "statistic",
                 "file": "/Users/vrunge/Dropbox/Mon Mac (pc-20.home)/Desktop/Rpackages/svpChange/src/tests.h",
-                "line": 104,
+                "line": 103,
                 "column": 12,
                 "hidden": false
             },
@@ -471,7 +477,7 @@
                 "parent_name": "",
                 "name": "OrderStatisticTree",
                 "file": "/Users/vrunge/Dropbox/Mon Mac (pc-20.home)/Desktop/Rpackages/svpChange/src/tests.h",
-                "line": 120,
+                "line": 119,
                 "column": 7,
                 "hidden": false
             },
@@ -481,7 +487,7 @@
                 "parent_name": "",
                 "name": "Node",
                 "file": "/Users/vrunge/Dropbox/Mon Mac (pc-20.home)/Desktop/Rpackages/svpChange/src/tests.h",
-                "line": 123,
+                "line": 122,
                 "column": 10,
                 "hidden": false
             },
@@ -491,7 +497,7 @@
                 "parent_name": "OrderStatisticTree",
                 "name": "get_size(Node *)",
                 "file": "/Users/vrunge/Dropbox/Mon Mac (pc-20.home)/Desktop/Rpackages/svpChange/src/tests.h",
-                "line": 139,
+                "line": 138,
                 "column": 14,
                 "hidden": false
             },
@@ -501,7 +507,7 @@
                 "parent_name": "OrderStatisticTree",
                 "name": "recalc(Node *)",
                 "file": "/Users/vrunge/Dropbox/Mon Mac (pc-20.home)/Desktop/Rpackages/svpChange/src/tests.h",
-                "line": 143,
+                "line": 142,
                 "column": 15,
                 "hidden": false
             },
@@ -511,7 +517,7 @@
                 "parent_name": "OrderStatisticTree",
                 "name": "rotate_right(Node *)",
                 "file": "/Users/vrunge/Dropbox/Mon Mac (pc-20.home)/Desktop/Rpackages/svpChange/src/tests.h",
-                "line": 148,
+                "line": 147,
                 "column": 9,
                 "hidden": false
             },
@@ -521,7 +527,7 @@
                 "parent_name": "OrderStatisticTree",
                 "name": "rotate_left(Node *)",
                 "file": "/Users/vrunge/Dropbox/Mon Mac (pc-20.home)/Desktop/Rpackages/svpChange/src/tests.h",
-                "line": 158,
+                "line": 157,
                 "column": 9,
                 "hidden": false
             },
@@ -531,7 +537,7 @@
                 "parent_name": "OrderStatisticTree",
                 "name": "random_priority",
                 "file": "/Users/vrunge/Dropbox/Mon Mac (pc-20.home)/Desktop/Rpackages/svpChange/src/tests.h",
-                "line": 168,
+                "line": 167,
                 "column": 7,
                 "hidden": false
             },
@@ -541,7 +547,7 @@
                 "parent_name": "OrderStatisticTree",
                 "name": "insert(Node *, double)",
                 "file": "/Users/vrunge/Dropbox/Mon Mac (pc-20.home)/Desktop/Rpackages/svpChange/src/tests.h",
-                "line": 174,
+                "line": 173,
                 "column": 9,
                 "hidden": false
             },
@@ -551,7 +557,7 @@
                 "parent_name": "OrderStatisticTree",
                 "name": "kth(Node *, int)",
                 "file": "/Users/vrunge/Dropbox/Mon Mac (pc-20.home)/Desktop/Rpackages/svpChange/src/tests.h",
-                "line": 193,
+                "line": 192,
                 "column": 10,
                 "hidden": false
             },
@@ -561,7 +567,7 @@
                 "parent_name": "OrderStatisticTree",
                 "name": "clear(Node *)",
                 "file": "/Users/vrunge/Dropbox/Mon Mac (pc-20.home)/Desktop/Rpackages/svpChange/src/tests.h",
-                "line": 205,
+                "line": 204,
                 "column": 8,
                 "hidden": false
             },
@@ -571,7 +577,7 @@
                 "parent_name": "OrderStatisticTree",
                 "name": "insert(double)",
                 "file": "/Users/vrunge/Dropbox/Mon Mac (pc-20.home)/Desktop/Rpackages/svpChange/src/tests.h",
-                "line": 222,
+                "line": 221,
                 "column": 8,
                 "hidden": false
             },
@@ -581,7 +587,7 @@
                 "parent_name": "OrderStatisticTree",
                 "name": "size",
                 "file": "/Users/vrunge/Dropbox/Mon Mac (pc-20.home)/Desktop/Rpackages/svpChange/src/tests.h",
-                "line": 226,
+                "line": 225,
                 "column": 7,
                 "hidden": false
             },
@@ -591,7 +597,7 @@
                 "parent_name": "OrderStatisticTree",
                 "name": "kth(int)",
                 "file": "/Users/vrunge/Dropbox/Mon Mac (pc-20.home)/Desktop/Rpackages/svpChange/src/tests.h",
-                "line": 230,
+                "line": 229,
                 "column": 10,
                 "hidden": false
             },
@@ -601,7 +607,7 @@
                 "parent_name": "",
                 "name": "QuantileCostExact",
                 "file": "/Users/vrunge/Dropbox/Mon Mac (pc-20.home)/Desktop/Rpackages/svpChange/src/tests.h",
-                "line": 242,
+                "line": 241,
                 "column": 7,
                 "hidden": false
             },
@@ -611,7 +617,7 @@
                 "parent_name": "QuantileCostExact",
                 "name": "update(double)",
                 "file": "/Users/vrunge/Dropbox/Mon Mac (pc-20.home)/Desktop/Rpackages/svpChange/src/tests.h",
-                "line": 254,
+                "line": 253,
                 "column": 8,
                 "hidden": false
             },
@@ -621,7 +627,7 @@
                 "parent_name": "QuantileCostExact",
                 "name": "statistic",
                 "file": "/Users/vrunge/Dropbox/Mon Mac (pc-20.home)/Desktop/Rpackages/svpChange/src/tests.h",
-                "line": 278,
+                "line": 277,
                 "column": 10,
                 "hidden": false
             },
@@ -631,7 +637,7 @@
                 "parent_name": "",
                 "name": "P2Quantile",
                 "file": "/Users/vrunge/Dropbox/Mon Mac (pc-20.home)/Desktop/Rpackages/svpChange/src/tests.h",
-                "line": 309,
+                "line": 308,
                 "column": 7,
                 "hidden": false
             },
@@ -641,7 +647,7 @@
                 "parent_name": "P2Quantile",
                 "name": "reset",
                 "file": "/Users/vrunge/Dropbox/Mon Mac (pc-20.home)/Desktop/Rpackages/svpChange/src/tests.h",
-                "line": 317,
+                "line": 316,
                 "column": 8,
                 "hidden": false
             },
@@ -651,7 +657,7 @@
                 "parent_name": "P2Quantile",
                 "name": "add(double)",
                 "file": "/Users/vrunge/Dropbox/Mon Mac (pc-20.home)/Desktop/Rpackages/svpChange/src/tests.h",
-                "line": 322,
+                "line": 321,
                 "column": 8,
                 "hidden": false
             },
@@ -661,7 +667,7 @@
                 "parent_name": "P2Quantile",
                 "name": "quantile",
                 "file": "/Users/vrunge/Dropbox/Mon Mac (pc-20.home)/Desktop/Rpackages/svpChange/src/tests.h",
-                "line": 390,
+                "line": 389,
                 "column": 10,
                 "hidden": false
             },
@@ -671,7 +677,7 @@
                 "parent_name": "P2Quantile",
                 "name": "parabolic(int, int)",
                 "file": "/Users/vrunge/Dropbox/Mon Mac (pc-20.home)/Desktop/Rpackages/svpChange/src/tests.h",
-                "line": 414,
+                "line": 413,
                 "column": 10,
                 "hidden": false
             },
@@ -681,7 +687,7 @@
                 "parent_name": "P2Quantile",
                 "name": "linear(int, int)",
                 "file": "/Users/vrunge/Dropbox/Mon Mac (pc-20.home)/Desktop/Rpackages/svpChange/src/tests.h",
-                "line": 421,
+                "line": 420,
                 "column": 10,
                 "hidden": false
             },
@@ -691,7 +697,7 @@
                 "parent_name": "",
                 "name": "QuantileCost",
                 "file": "/Users/vrunge/Dropbox/Mon Mac (pc-20.home)/Desktop/Rpackages/svpChange/src/tests.h",
-                "line": 438,
+                "line": 437,
                 "column": 7,
                 "hidden": false
             },
@@ -701,7 +707,7 @@
                 "parent_name": "QuantileCost",
                 "name": "update(double)",
                 "file": "/Users/vrunge/Dropbox/Mon Mac (pc-20.home)/Desktop/Rpackages/svpChange/src/tests.h",
-                "line": 451,
+                "line": 450,
                 "column": 8,
                 "hidden": false
             },
@@ -711,8 +717,48 @@
                 "parent_name": "QuantileCost",
                 "name": "statistic",
                 "file": "/Users/vrunge/Dropbox/Mon Mac (pc-20.home)/Desktop/Rpackages/svpChange/src/tests.h",
-                "line": 462,
+                "line": 461,
                 "column": 10,
+                "hidden": false
+            },
+            {
+                "usr": "c:@S@Chi2Cost",
+                "kind": 2,
+                "parent_name": "",
+                "name": "Chi2Cost",
+                "file": "/Users/vrunge/Dropbox/Mon Mac (pc-20.home)/Desktop/Rpackages/svpChange/src/tests.h",
+                "line": 491,
+                "column": 7,
+                "hidden": false
+            },
+            {
+                "usr": "c:@S@Chi2Cost@F@update#d#",
+                "kind": 7,
+                "parent_name": "Chi2Cost",
+                "name": "update(double)",
+                "file": "/Users/vrunge/Dropbox/Mon Mac (pc-20.home)/Desktop/Rpackages/svpChange/src/tests.h",
+                "line": 501,
+                "column": 8,
+                "hidden": false
+            },
+            {
+                "usr": "c:@S@Chi2Cost@F@statistic#1",
+                "kind": 7,
+                "parent_name": "Chi2Cost",
+                "name": "statistic",
+                "file": "/Users/vrunge/Dropbox/Mon Mac (pc-20.home)/Desktop/Rpackages/svpChange/src/tests.h",
+                "line": 512,
+                "column": 10,
+                "hidden": false
+            },
+            {
+                "usr": "c:@S@Chi2Cost@F@dof#1",
+                "kind": 7,
+                "parent_name": "Chi2Cost",
+                "name": "dof",
+                "file": "/Users/vrunge/Dropbox/Mon Mac (pc-20.home)/Desktop/Rpackages/svpChange/src/tests.h",
+                "line": 524,
+                "column": 7,
                 "hidden": false
             }
         ],

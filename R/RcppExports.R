@@ -114,6 +114,10 @@ svp0 <- function(data, gamma, test, prune_if_unvalid = TRUE, prune_if_PELT = FAL
     .Call(`_svpChange_svp0`, data, gamma, test, prune_if_unvalid, prune_if_PELT)
 }
 
+SVP_costTEsts <- function(data, gamma, test, quantile = 0.01) {
+    .Call(`_svpChange_SVP_costTEsts`, data, gamma, test, quantile)
+}
+
 #' Smallest Valid Partitioning with FOCUS validity test
 #'
 #' @title Smallest Valid Partitioning with Validation and Pruning

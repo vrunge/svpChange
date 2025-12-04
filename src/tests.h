@@ -1,4 +1,3 @@
-
 #pragma once
 #include "focus.h"
 #include <memory>
@@ -243,7 +242,7 @@ class QuantileCostExact : public TestBase
 {
 public:
   // x in (0, 0.5] typically
-  explicit QuantileCostExact(double x)
+  QuantileCostExact(double x)
     : x_(x),
       tree_(),
       n_(0),
@@ -279,7 +278,7 @@ public:
   {
     if (n_ == 0)
       return std::numeric_limits<double>::quiet_NaN();
-    if (n_ == 1)
+    if (n_ <= 1)
       return 0.0; // q_{1-x} = q_x
 
     return q_high_ - q_low_;
@@ -463,7 +462,7 @@ public:
   {
     if (n_ == 0)
       return std::numeric_limits<double>::quiet_NaN();
-    if (n_ == 1)
+    if (n_ <= 1)
       return 0.0; // q_{1-x} = q_x = y_1
 
     // O(1): just use the cached values
@@ -478,3 +477,59 @@ private:
   double q_high_;
   int    n_;        // number of points seen
 };
+
+
+
+
+////////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////////
+
+
+/// Gaussian chi-square cost:
+/// C_n = sum (y_t - mean)^2, statistic = C_n / sigma^2 ~ chi^2_{n-1} under H0.
+class Chi2Cost : public TestBase
+{
+public:
+  // sigma2 is the (known) variance of the noise
+  Chi2Cost()
+    : n_(0),
+      mean_(0.0),
+      M2_(0.0)   // will store sum (y_t - mean)^2
+  {}
+
+  void update(double y) override
+  {
+    ++n_;
+    // Welford's online update
+    double delta  = y - mean_;
+    mean_        += delta / static_cast<double>(n_);
+    double delta2 = y - mean_;
+    M2_          += delta * delta2; // accumulated SSE around the running mean
+  }
+
+  // Returns chi-square statistic: C_n / sigma^2
+  double statistic() const override
+  {
+    if (n_ == 0)
+      return std::numeric_limits<double>::quiet_NaN();
+    if (n_ == 1)
+      // With one point, df = 0, SSE = 0, so statistic is 0.
+      return 0.0;
+
+    return M2_/n_;
+  }
+
+  // Optional helper: degrees of freedom of the chi^2
+  int dof() const
+  {
+    return (n_ > 0) ? (n_ - 1) : 0;
+  }
+
+private:
+  int    n_;      // number of points
+  double mean_;   // running mean
+  double M2_;     // running sum of squared deviations from mean (SSE)
+};
+
+
