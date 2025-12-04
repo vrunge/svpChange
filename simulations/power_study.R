@@ -105,7 +105,7 @@ run_power_study <- function(n = 1000,
 
         # penalties
         penalty_pelt <- 2 * log(n)
-        penalty_svp  <- 1.55 * log(n)
+        penalty_svp  <- 1.5 * log(n)
 
         # run PELT
         obj_pelt <- tryCatch(cpt.mean(y, method = "PELT", penalty = "Manual", pen.value = penalty_pelt), error = function(e) NULL)
@@ -221,6 +221,8 @@ plot_power_metrics <- function(df) {
   }
 
   long <- df %>% pivot_longer(cols = c(Precision, Recall, F1, NumSegments, MSE), names_to = "metric", values_to = "value")
+  # Ensure pattern is a factor with consistent levels
+  long$pattern <- factor(long$pattern, levels = c("none", "up", "updown", "rand1"))
 
   stats <- long %>% group_by(algorithm, pattern, jump, metric) %>% do(summarise_ci(.)) %>% ungroup()
 
@@ -231,7 +233,7 @@ plot_power_metrics <- function(df) {
       geom_ribbon(aes(ymin = lower, ymax = upper), alpha = 0.15, color = NA) +
       geom_line(size = 1) +
       geom_point(size = 1.5) +
-      facet_wrap(~pattern, scales = "fixed") +
+      facet_wrap(~factor(pattern, levels = c("none", "up", "updown", "rand1")), scales = "fixed") +
       labs(x = "Jump size", y = m) +
       theme_minimal()
     out <- file.path("simulations", "plots", paste0(tolower(gsub("[^A-Za-z0-9]","",m)), "_vs_jump.pdf"))
@@ -241,7 +243,7 @@ plot_power_metrics <- function(df) {
 }
 
 
-plot_scenarios <- function(n = 10000, jumpSize = 3, nbSeg = 8) {
+plot_scenarios <- function(n = 1000, jumpSize = 0.75, nbSeg = 8) {
   dir.create(file.path("simulations", "plots"), recursive = TRUE, showWarnings = FALSE)
   
   patterns <- c("none", "up", "updown", "rand1")
@@ -251,24 +253,21 @@ plot_scenarios <- function(n = 10000, jumpSize = 3, nbSeg = 8) {
   signal_data <- lapply(patterns, function(pat) {
     mu <- generate_signal(n, pattern = pat, nbSeg = nbSeg, jumpSize = jumpSize)
     y <- mu + rnorm(length(mu), mean = 0, sd = 1)
-    rbind(
-      data.frame(x = seq_along(mu), signal = mu, pattern = pat, type = "Clean"),
-      data.frame(x = seq_along(y), signal = y, pattern = pat, type = "Noisy")
-    )
+    data.frame(t = seq_along(mu), y = y, mu = mu, pattern = pat)
   })
   
   df_signals <- do.call(rbind, signal_data)
   df_signals$pattern <- factor(df_signals$pattern, levels = patterns)
-  df_signals$type <- factor(df_signals$type, levels = c("Clean", "Noisy"))
+  rownames(df_signals) <- NULL
   
-  p <- ggplot(df_signals, aes(x = x, y = signal, color = type)) +
-    geom_line(size = 0.4, alpha = 0.8) +
-    facet_wrap( ~ pattern, scales = "free_y") +
-    labs(x = "Index", y = "Values") +
-    theme_minimal() +
-    theme(legend.position = "none")
+  p <- ggplot(df_signals) +
+    geom_point(aes(x = t, y = y), alpha = 0.2) +
+    geom_line(aes(x = t, y = mu), col = "red", linewidth = 0.8) +
+    facet_wrap(~factor(pattern)) +
+    labs(x = "Time (Index)", y = "Value") +
+    theme_minimal()
   
-  out <- file.path("simulations", "plots", "signal_scenarios.png")
+  out <- file.path("simulations", "plots", "signal_scenarios.pdf")
   ggsave(filename = out, plot = p, width = 10, height = 5)
   message("Saved plot: ", out)
   p
@@ -334,7 +333,7 @@ DO_RUN <- TRUE
 DO_PLOT <- TRUE
 
 if (DO_RUN) {
-  df <- run_power_study(n = 1000, patterns = c("none", "up", "updown", "rand1"), jumpSizes = c(seq(0.1, 2, by = 0.1)), reps = 50)
+  df <- run_power_study(n = 1000, patterns = c("none", "up", "updown", "rand1"), jumpSizes = c(seq(0.1, 2, by = 0.1)), reps = 100)
 }
 
 if (DO_PLOT) {
@@ -360,7 +359,7 @@ if (DO_PLOT) {
   }
   
   plot_power_metrics(df)
-  plot_scenarios(n = 1000, jumpSize = 0.75, nbSeg = 8)
+  plot_scenarios(n = 1000, jumpSize = 0.6, nbSeg = 8)
   
   plot_changepoint_distributions(df, n_bins = 100, selected_jumpsize = 0.6)
 
