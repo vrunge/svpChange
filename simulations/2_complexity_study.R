@@ -52,7 +52,7 @@ run_exp1 <- function(n_values = round(seq(500, 10000, length.out = 20)),
                      seed = 123) {
   set.seed(seed)
 
-  res_list <- future_lapply(n_values, function(n) {
+  res_list <- lapply(n_values, function(n) {
     replicate(reps, {
       data <- rnorm(n, mean = 0, sd = 1)
       pelt <- time_and_count_pelt(data, penalty_large)
@@ -61,7 +61,7 @@ run_exp1 <- function(n_values = round(seq(500, 10000, length.out = 20)),
            PELT = pelt$time, PELT_nchanges = pelt$nchanges,
            SVP  = svp$time,  SVP_nchanges  = svp$nchanges)
     }, simplify = FALSE)
-  }, future.seed = TRUE)
+  })
 
   results_flat <- do.call(c, res_list)
   df <- do.call(rbind, lapply(results_flat, as.data.frame))
