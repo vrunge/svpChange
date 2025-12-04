@@ -106,7 +106,7 @@ run_robust_power_study <- function(n = 1000,
         cp_true <- c(which(diff(mu) != 0), length(mu))
 
         # penalties
-        penalty_pelt <- 2 * log(n)
+        penalty_pelt <- 3 * log(n)
 
         # run PELT
         obj_pelt <- tryCatch(cpt.mean(y, method = "PELT", penalty = "Manual", pen.value = penalty_pelt), error = function(e) NULL)
@@ -153,7 +153,7 @@ run_robust_power_study <- function(n = 1000,
         res_rfpop <- tryCatch({
           Rob_seg.std(x = y / est_sd, 
                      loss = "Outlier",
-                     lambda = 2 * log(length(y)),
+                     lambda = 3 * log(length(y)),
                      lthreshold = 3)
         }, error = function(e) NULL)
         
@@ -237,7 +237,7 @@ plot_robust_power_metrics <- function(df) {
       geom_line(size = 1) +
       geom_point(size = 1.5) +
       facet_wrap(~factor(pattern, levels = c("none", "up", "updown", "rand1")), scales = "fixed") +
-      labs(x = "Jump size", y = m, title = paste(m, "vs Jump Size (Heavy-tailed noise, df=2)")) +
+      labs(x = "Jump size", y = m) +
       theme_minimal()
     out <- file.path("simulations", "plots_robust_heavy_tails", paste0(tolower(gsub("[^A-Za-z0-9]","",m)), "_vs_jump_robust.pdf"))
     ggsave(filename = out, plot = p, width = 10, height = 5)
@@ -267,7 +267,7 @@ plot_robust_scenarios <- function(n = 1000, jumpSize = 0.75, nbSeg = 8) {
     geom_point(aes(x = t, y = y), alpha = 0.2) +
     geom_line(aes(x = t, y = mu), col = "red", linewidth = 0.8) +
     facet_wrap(~factor(pattern)) +
-    labs(x = "Time (Index)", y = "Value", title = "Signal Scenarios with Heavy-tailed Noise (t, df=2)") +
+    labs(x = "Time (Index)", y = "Value") +
     theme_minimal()
   
   out <- file.path("simulations", "plots_robust_heavy_tails", "signal_scenarios_robust.pdf")
