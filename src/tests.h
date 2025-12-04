@@ -278,7 +278,7 @@ public:
   {
     if (n_ == 0)
       return std::numeric_limits<double>::quiet_NaN();
-    if (n_ <= 1)
+    if (n_ <= 20)
       return 0.0; // q_{1-x} = q_x
 
     return q_high_ - q_low_;
@@ -462,7 +462,7 @@ public:
   {
     if (n_ == 0)
       return std::numeric_limits<double>::quiet_NaN();
-    if (n_ <= 1)
+    if (n_ <= 20)
       return 0.0; // q_{1-x} = q_x = y_1
 
     // O(1): just use the cached values
@@ -485,14 +485,13 @@ private:
 ////////////////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////////
 
-
-/// Gaussian chi-square cost:
-/// C_n = sum (y_t - mean)^2, statistic = C_n / sigma^2 ~ chi^2_{n-1} under H0.
-class Chi2Cost : public TestBase
+/// GvarCost cost:
+/// C_n = 1/n sum (y_t - mean)^2, statistic = C_n / sigma^2 ~ chi^2_{n-1} under H0.
+/// n <= 10 cannot be rejected
+class varCost : public TestBase
 {
 public:
-  // sigma2 is the (known) variance of the noise
-  Chi2Cost()
+  varCost()
     : n_(0),
       mean_(0.0),
       M2_(0.0)   // will store sum (y_t - mean)^2
@@ -513,7 +512,7 @@ public:
   {
     if (n_ == 0)
       return std::numeric_limits<double>::quiet_NaN();
-    if (n_ == 1)
+    if (n_ <= 10)
       // With one point, df = 0, SSE = 0, so statistic is 0.
       return 0.0;
 
@@ -530,6 +529,107 @@ private:
   int    n_;      // number of points
   double mean_;   // running mean
   double M2_;     // running sum of squared deviations from mean (SSE)
+};
+
+
+
+
+
+/// WilcoxonCost:
+/// - Stores the data y_1, ..., y_n via update(y).
+/// - statistic() computes, for each split t = 1..n-1,
+///     A = {y_1, ..., y_t},  B = {y_{t+1}, ..., y_n}
+///   the Wilcoxon rank-sum statistic W_t (centered),
+///   and returns max_t |W_t|.
+///
+/// Steps:
+///   1) Rank all y_i together (ties -> average rank).
+///   2) Prefix sum of ranks.
+///   3) For each t, R_A(t) = sum_{i<=t} rank[i].
+///      W_t = R_A(t) - t * (n+1)/2.
+///   4) Return max_t |W_t|.
+class WilcoxonCost : public TestBase
+{
+public:
+  WilcoxonCost() = default;
+
+  void update(double y) override
+  {
+    values_.push_back(y);
+  }
+
+  double statistic() const override
+  {
+    const std::size_t n = values_.size();
+    if (n == 0) {
+      return std::numeric_limits<double>::quiet_NaN();
+    }
+    if (n == 1) {
+      // No split possible
+      return 0.0;
+    }
+
+    struct Item {
+      double value;
+      std::size_t index; // original index
+    };
+
+    std::vector<Item> items(n);
+    for (std::size_t i = 0; i < n; ++i) {
+      items[i] = Item{values_[i], i};
+    }
+
+    // Sort by value to assign ranks
+    std::sort(items.begin(), items.end(),
+              [](const Item& a, const Item& b) {
+                return a.value < b.value;
+              });
+
+    // rank[i] = rank of y_i (1-based, with average rank for ties)
+    std::vector<double> rank(n);
+
+    std::size_t i = 0;
+    while (i < n) {
+      std::size_t j = i + 1;
+      // group ties
+      while (j < n && items[j].value == items[i].value) {
+        ++j;
+      }
+      // average rank for indices [i, j)
+      // positions are i+1, ..., j (1-based)
+      double r = (static_cast<double>(i + 1) + static_cast<double>(j)) / 2.0;
+      for (std::size_t k = i; k < j; ++k) {
+        rank[items[k].index] = r;
+      }
+      i = j;
+    }
+
+    // Prefix sums of ranks: prefix_rank[t] = sum_{i=0}^{t-1} rank[i]
+    std::vector<double> prefix_rank(n + 1, 0.0);
+    for (std::size_t k = 0; k < n; ++k) {
+      prefix_rank[k + 1] = prefix_rank[k] + rank[k];
+    }
+
+    // Scan all possible splits t = 1..n-1, compute centered Wilcoxon
+    double max_abs_W = 0.0;
+    const double n_plus_1_over_2 = (static_cast<double>(n) + 1.0) / 2.0;
+
+    for (std::size_t t = 1; t < n; ++t) {
+      double R_A = prefix_rank[t]; // sum of ranks in {0..t-1}
+      double t_d = static_cast<double>(t);
+      // Centered rank-sum: subtract expected sum under H0
+      double W_t = R_A - t_d * n_plus_1_over_2;
+      double abs_W_t = std::fabs(W_t);
+      if (abs_W_t > max_abs_W) {
+        max_abs_W = abs_W_t;
+      }
+    }
+
+    return max_abs_W;
+  }
+
+private:
+  std::vector<double> values_; // stores y_1..y_n
 };
 
 

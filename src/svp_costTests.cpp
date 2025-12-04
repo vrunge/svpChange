@@ -45,13 +45,21 @@ List SVP_costTEsts(std::vector<double> data,
   {
     newTest = []() { return std::make_unique<GaussianVariance>(); };
   }
-  else if (test == "quantile")
+  else if (test == "quantileExact")
   {
     newTest = [quantile]() { return std::make_unique<QuantileCostExact>(quantile); };
   }
-  else if (test == "Chi2Cost")
+  else if (test == "quantile")
   {
-    newTest = []() { return std::make_unique<Chi2Cost>(); };
+    newTest = [quantile]() { return std::make_unique<QuantileCost>(quantile); };
+  }
+  else if (test == "varCost")
+  {
+    newTest = []() { return std::make_unique<varCost>(); };
+  }
+  else if (test == "WilcoxonCost")
+  {
+    newTest = []() { return std::make_unique<WilcoxonCost>(); };
   }
   else
   {
