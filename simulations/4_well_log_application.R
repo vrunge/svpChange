@@ -1,11 +1,11 @@
+
 # devtools::install_github("guillemr/robust-fpop")
-library(robseg)
+library(robseg) # for Robust FPOP
+library(DeCAFS) # for well log data
+library(changepoint) # For PELT change un mean
 
-# install.packages(fastcpd, repos = c("https://doccstat.r-universe.dev", "https://cloud.r-project.org"))
-library(fastcpd)
 
-library(changepoint)
-
+#######
 
 threshold_mood <- function(n, nbSeg, alpha = 0.01)
 {
@@ -14,15 +14,15 @@ threshold_mood <- function(n, nbSeg, alpha = 0.01)
   qchisq(1 - p_single, df = nbSeg)
 }
 
-alpha <- 0.001
-p_single <- alpha / (  m <- n/5 - 1)
-qchisq(1 - p_single, df = 1)
 
-
-y  <- well_log
-n  <- length(well_log)
+y <- (DeCAFS::oilWell)
+n  <- length(y)
 nbSeg <- 30  # <-- changed here
 
+
+## variance estimation by MAD estimator
+
+est_sd <- mad(y, constant = 1.4826)
 
 ## --- Changepoint estimation ---
 
@@ -34,8 +34,6 @@ resPELT <- cpt.mean(
   pen.value = 70
 )
 
-
-est_sd <- mad(y, constant = 1.4826)
 
 resR <- Rob_seg.std(
   x          = y / est_sd,
@@ -109,7 +107,7 @@ plot_piecewise_constant(y, resW$changepoints,
                         main = "SVP Wilcoson",
                         col_line = 2)
 
-# 3) SVP_costTEsts segmentation
+# 4) SVP_costTEsts segmentation
 plot_piecewise_constant(y, resM$changepoints,
                         main = "SVP Median Mood",
                         col_line = 5)
