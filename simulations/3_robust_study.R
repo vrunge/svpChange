@@ -1,6 +1,6 @@
 #!/usr/bin/env Rscript
 ## simulations/power_study_robust_heavy_tails.R
-## Power study comparing PELT vs SVP (Wilcoxon) vs rfpop on heavy-tailed noise.
+## Power study comparing PELT vs SVP (Wilcoxon) vs SVP (MedianMood) vs rfpop on heavy-tailed noise.
 ## - n = 1000
 ## - patterns = c("none","up","updown","rand1")
 ## - jumpSize in seq(0.1, 2, by = 0.1)
@@ -79,12 +79,22 @@ cp_metrics <- function(cp_true, cp_est, tol = 5) {
 }
 
 
+## Threshold function for Median-Mood test (as provided)
+threshold_mood <- function(n, nbSeg, alpha = 0.01)
+{
+  m <- n / nbSeg - 1
+  p_single <- 1 - (1 - alpha)^(1 / m)  # Dunn–Šidák
+  qchisq(1 - p_single, df = nbSeg)
+}
+
+
 run_robust_power_study <- function(n = 1000,
                                    patterns = c("none", "up", "updown", "rand1"),
                                    jumpSizes = seq(0.1, 2, by = 0.1),
                                    reps = 100,
                                    workers = max(1, future::availableCores() - 1),
-                                   seed = 123) {
+                                   seed = 123,
+                                   nbSeg = 8) {
   set.seed(seed)
   plan(multisession, workers = workers)
 
@@ -100,10 +110,12 @@ run_robust_power_study <- function(n = 1000,
       jump <- combos$jump[idx]
       replicate(reps, {
         p()
-        mu <- generate_signal(n, pattern = pattern, nbSeg = 8, jumpSize = jump)
+        mu <- generate_signal(n, pattern = pattern, nbSeg = nbSeg, jumpSize = jump)
         # Heavy-tailed noise: t-distribution with df=2
         y <- mu + rt(n, df = 2)
         cp_true <- c(which(diff(mu) != 0), length(mu))
+        # infer the actual number of segments in this scenario
+        nbSeg_current <- length(cp_true)
 
         # penalties
         penalty_pelt <- 2 * log(n)
@@ -126,7 +138,8 @@ run_robust_power_study <- function(n = 1000,
         }
 
         # run SVP with Wilcoxon cost test using SVP_costTEsts
-        resW <- tryCatch(SVP_costTEsts(y, gamma = 1.5 * sqrt((n/length(cp_true))^3/12), test = "WilcoxonCost"), error = function(e) NULL)
+        # gamma uses the inferred nbSeg_current through cp_true length already below
+        resW <- tryCatch(SVP_costTEsts(y, gamma = 1.5 * sqrt((n / nbSeg_current)^3 / 12), test = "WilcoxonCost"), error = function(e) NULL)
         cp_svp_wilk <- integer(0)
         if (!is.null(resW)) {
           if (is.list(resW) && !is.null(resW$changepoints)) cp_svp_wilk <- as.integer(unlist(resW$changepoints))
@@ -145,6 +158,33 @@ run_robust_power_study <- function(n = 1000,
             }
           }
           if (length(mu_hat_svp_wilk) == length(mu)) mse_svp_wilk <- mean((mu - mu_hat_svp_wilk)^2)
+        }
+
+        # run SVP with Median-Mood Cost test using the threshold function provided
+        # Use nbSeg_current (inferred) for the threshold calculation
+        gamma_mood <- tryCatch(threshold_mood(n = n, nbSeg = nbSeg_current, alpha = 0.01), error = function(e) NULL)
+        resM <- NULL
+        if (!is.null(gamma_mood)) {
+          resM <- tryCatch(SVP_costTEsts(y, gamma = gamma_mood, test = "MedianMoodCost"), error = function(e) NULL)
+        }
+        cp_svp_mood <- integer(0)
+        if (!is.null(resM)) {
+          if (is.list(resM) && !is.null(resM$changepoints)) cp_svp_mood <- as.integer(unlist(resM$changepoints))
+        }
+        cp_svp_mood <- unique(c(cp_svp_mood, length(y)))
+        metrics_svp_mood <- cp_metrics(cp_true, cp_svp_mood, tol = round(n * 0.0025))
+        nseg_svp_mood <- length(cp_svp_mood)
+        mse_svp_mood <- NA_real_
+        if (length(cp_svp_mood) > 0) {
+          mu_hat_svp_mood <- numeric(0)
+          for (i in seq_along(cp_svp_mood)) {
+            if (i == 1) {
+              mu_hat_svp_mood <- rep(mean(y[1:cp_svp_mood[i]]), cp_svp_mood[i])
+            } else {
+              mu_hat_svp_mood <- c(mu_hat_svp_mood, rep(mean(y[(cp_svp_mood[i - 1] + 1):cp_svp_mood[i]]), cp_svp_mood[i] - cp_svp_mood[i - 1]))
+            }
+          }
+          if (length(mu_hat_svp_mood) == length(mu)) mse_svp_mood <- mean((mu - mu_hat_svp_mood)^2)
         }
 
         # run rfpop from robseg
@@ -177,13 +217,13 @@ run_robust_power_study <- function(n = 1000,
           pattern = pattern,
           jump = jump,
           rep = as.integer(NA),
-          algorithm = c("PELT", "SVP (Wilcoxon)", "rfpop"),
-          Precision = c(metrics_pelt$Precision, metrics_svp_wilk$Precision, metrics_rfpop$Precision),
-          Recall = c(metrics_pelt$Recall, metrics_svp_wilk$Recall, metrics_rfpop$Recall),
-          F1 = c(metrics_pelt$F1, metrics_svp_wilk$F1, metrics_rfpop$F1),
-          NumSegments = c(nseg_pelt, nseg_svp_wilk, nseg_rfpop),
-          MSE = c(mse_pelt, mse_svp_wilk, mse_rfpop),
-          changepoints = list(cp_pelt, cp_svp_wilk, cp_rfpop)
+          algorithm = c("PELT", "SVP (Wilcoxon)", "SVP (MedianMood)", "rfpop"),
+          Precision = c(metrics_pelt$Precision, metrics_svp_wilk$Precision, metrics_svp_mood$Precision, metrics_rfpop$Precision),
+          Recall = c(metrics_pelt$Recall, metrics_svp_wilk$Recall, metrics_svp_mood$Recall, metrics_rfpop$Recall),
+          F1 = c(metrics_pelt$F1, metrics_svp_wilk$F1, metrics_svp_mood$F1, metrics_rfpop$F1),
+          NumSegments = c(nseg_pelt, nseg_svp_wilk, nseg_svp_mood, nseg_rfpop),
+          MSE = c(mse_pelt, mse_svp_wilk, mse_svp_mood, mse_rfpop),
+          changepoints = list(cp_pelt, cp_svp_wilk, cp_svp_mood, cp_rfpop)
         )
         tib
       }, simplify = FALSE)
@@ -203,7 +243,11 @@ run_robust_power_study <- function(n = 1000,
   results_csv <- results_df %>% select(-changepoints)
   out_path <- file.path("simulations", "power_study_robust_heavy_tails_results.csv")
   write.csv(results_csv, out_path, row.names = FALSE)
-  message("Saved results to: ", out_path)
+  # Also save full RDS (preserves changepoints list-column)
+  out_rds <- file.path("simulations", "power_study_robust_heavy_tails_results.rds")
+  saveRDS(results_df, out_rds)
+  message("Saved results to CSV: ", out_path)
+  message("Saved full results (RDS) with changepoints to: ", out_rds)
   
   # Return the full results_df with changepoints intact for use in plotting
   results_df
@@ -338,7 +382,8 @@ if (DO_RUN) {
   results_df <- run_robust_power_study(n = 1000, 
                                        patterns = c("none", "up", "updown", "rand1"), 
                                        jumpSizes = seq(0.1, 4, by = 0.1), 
-                                       reps = 100)
+                                       reps = 100,
+                                       nbSeg = 8)
 }
 
 if (DO_PLOT) {
