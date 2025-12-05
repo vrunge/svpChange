@@ -633,3 +633,137 @@ private:
 };
 
 
+/**
+ * MedianMoodCost:
+ *
+ * Implements a scan version of Mood's median test for a single changepoint.
+ *
+ * - Data are added via update(y).
+ * - statistic() computes:
+ *      * global median m of all y's,
+ *      * for each split t, counts below/above m in the two groups,
+ *      * builds a 2x2 table and computes chi-square,
+ *      * returns the maximum chi-square over t.
+ *
+ * This is robust (median + only above/below information) and
+ * detects changes in location (median).
+ */
+class MedianMoodCost : public TestBase {
+public:
+  MedianMoodCost() = default;
+
+  void update(double y) override {
+    values_.push_back(y);
+  }
+
+  double statistic() const override {
+    const std::size_t n = values_.size();
+    if (n < 2) {
+      return 0.0;  // not enough data to split
+    }
+
+    // --- 1) Global median (ONE nth_element) ---
+
+    tmp_ = values_;                 // reuse buffer, single copy
+    auto mid_it = tmp_.begin() + n / 2;
+    std::nth_element(tmp_.begin(), mid_it, tmp_.end());
+    double med = *mid_it;           // any median is fine for Mood's test
+
+    // If you *really* want the average of the two middles for even n,
+    // you could do a second nth_element here, but that costs time.
+    // For the median test, taking this single median is enough.
+
+    // --- 2) Prefix counts for below/above median (no separate below/above arrays) ---
+
+    prefix_below_.assign(n + 1, 0);
+    prefix_above_.assign(n + 1, 0);
+
+    int b_count = 0;
+    int a_count = 0;
+
+    for (std::size_t i = 0; i < n; ++i) {
+      if (values_[i] < med) {
+        ++b_count;
+      } else if (values_[i] > med) {
+        ++a_count;
+      }
+      // ties at median -> ignored (no increment)
+
+      prefix_below_[i + 1] = b_count;
+      prefix_above_[i + 1] = a_count;
+    }
+
+    const int total_below   = prefix_below_[n];
+    const int total_above   = prefix_above_[n];
+    const int N_effective   = total_below + total_above;
+
+    // If everything is exactly equal to the median, no information.
+    if (N_effective == 0) {
+      return 0.0;
+    }
+
+    // --- 3) Scan all splits and compute chi-square ---
+
+    double best_chisq = 0.0;
+
+    for (std::size_t t = 1; t < n; ++t) {
+      // Group A: indices [0, t-1]
+      // Group B: indices [t, n-1]
+      int a11 = prefix_below_[t];          // A, below
+      int a12 = prefix_above_[t];          // A, above
+      int a21 = total_below - a11;         // B, below
+      int a22 = total_above - a12;         // B, above
+
+      int nA = a11 + a12;
+      int nB = a21 + a22;
+
+      // no "signal" in one side -> skip
+      if (nA == 0 || nB == 0) {
+        continue;
+      }
+
+      double N    = static_cast<double>(nA + nB);
+      double Btot = static_cast<double>(total_below);
+      double Atot = static_cast<double>(total_above);
+
+      // Expected counts under independence
+      double E11 = nA * Btot / N;
+      double E12 = nA * Atot / N;
+      double E21 = nB * Btot / N;
+      double E22 = nB * Atot / N;
+
+      double chisq = 0.0;
+
+      if (E11 > 0.0) {
+        double diff = a11 - E11;
+        chisq += diff * diff / E11;
+      }
+      if (E12 > 0.0) {
+        double diff = a12 - E12;
+        chisq += diff * diff / E12;
+      }
+      if (E21 > 0.0) {
+        double diff = a21 - E21;
+        chisq += diff * diff / E21;
+      }
+      if (E22 > 0.0) {
+        double diff = a22 - E22;
+        chisq += diff * diff / E22;
+      }
+
+      if (chisq > best_chisq) {
+        best_chisq = chisq;
+      }
+    }
+
+    return best_chisq;
+  }
+
+private:
+  std::vector<double> values_;              // stored data
+
+  // scratch buffers reused across calls to statistic()
+  mutable std::vector<double> tmp_;         // for median selection
+  mutable std::vector<int>    prefix_below_;
+  mutable std::vector<int>    prefix_above_;
+};

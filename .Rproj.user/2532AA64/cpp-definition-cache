@@ -346,7 +346,7 @@
     },
     {
         "file": "/Users/vrunge/Dropbox/Mon Mac (pc-20.home)/Desktop/Rpackages/svpChange/src/svp_costTests.cpp",
-        "file_last_write": 1764856443.0,
+        "file_last_write": 1764892733.0,
         "definitions": [],
         "hidden": false
     },
@@ -369,7 +369,7 @@
     },
     {
         "file": "/Users/vrunge/Dropbox/Mon Mac (pc-20.home)/Desktop/Rpackages/svpChange/src/tests.h",
-        "file_last_write": 1764850463.0,
+        "file_last_write": 1764894097.0,
         "definitions": [
             {
                 "usr": "c:@S@TestBase",
@@ -788,6 +788,36 @@
                 "name": "statistic",
                 "file": "/Users/vrunge/Dropbox/Mon Mac (pc-20.home)/Desktop/Rpackages/svpChange/src/tests.h",
                 "line": 561,
+                "column": 10,
+                "hidden": false
+            },
+            {
+                "usr": "c:@S@MedianMoodCost",
+                "kind": 2,
+                "parent_name": "",
+                "name": "MedianMoodCost",
+                "file": "/Users/vrunge/Dropbox/Mon Mac (pc-20.home)/Desktop/Rpackages/svpChange/src/tests.h",
+                "line": 651,
+                "column": 7,
+                "hidden": false
+            },
+            {
+                "usr": "c:@S@MedianMoodCost@F@update#d#",
+                "kind": 7,
+                "parent_name": "MedianMoodCost",
+                "name": "update(double)",
+                "file": "/Users/vrunge/Dropbox/Mon Mac (pc-20.home)/Desktop/Rpackages/svpChange/src/tests.h",
+                "line": 655,
+                "column": 8,
+                "hidden": false
+            },
+            {
+                "usr": "c:@S@MedianMoodCost@F@statistic#1",
+                "kind": 7,
+                "parent_name": "MedianMoodCost",
+                "name": "statistic",
+                "file": "/Users/vrunge/Dropbox/Mon Mac (pc-20.home)/Desktop/Rpackages/svpChange/src/tests.h",
+                "line": 659,
                 "column": 10,
                 "hidden": false
             }

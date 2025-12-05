@@ -61,6 +61,10 @@ List SVP_costTEsts(std::vector<double> data,
   {
     newTest = []() { return std::make_unique<WilcoxonCost>(); };
   }
+  else if (test == "MedianMoodCost")
+  {
+    newTest = []() { return std::make_unique<MedianMoodCost>(); };
+  }
   else
   {
     stop("Unknown test type");
