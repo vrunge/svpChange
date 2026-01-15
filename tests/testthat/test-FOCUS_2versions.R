@@ -2,6 +2,7 @@
 
 library(testthat)
 library(svpChange)
+library(FOCuS)
 
 ########## test svp0 result = SVP result with prune_if_unvalid == TRUE ##########
 ########## test svp0 result = SVP result with prune_if_unvalid == TRUE ##########

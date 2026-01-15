@@ -24,7 +24,7 @@
 #' tsGenerator(chpts = c(50,70,120,200), parameter = c(0,3,-1,1), type = "gauss")
 #' tsGenerator(chpts = c(50,100,180), parameter = c(3,1,6), type = "variance")
 tsGenerator <- function(chpts = 100,
-                        parameters = 0.5, # as 0 is not available for costs exp, poisson, geom, negbin
+                        parameters = 0.5, # as 0 is not available for costs exp, poisson, geom, negbin, variance
                         sdNoise = 1,
                         nbTrials = 10,
                         nbSuccess = 10,

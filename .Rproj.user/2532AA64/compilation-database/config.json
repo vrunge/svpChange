@@ -17,8 +17,8 @@
     ],
     "pch": "RcppArmadillo",
     "is_cpp": true,
-    "hash": "1764838557",
-    "compiler": "6541440713598565200",
+    "hash": "1768215818",
+    "compiler": "13758584189086332288",
     "rversion": "4.5.2",
     "dbversion": 4
 }

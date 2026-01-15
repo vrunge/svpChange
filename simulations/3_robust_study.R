@@ -1,4 +1,4 @@
-#!/usr/bin/env Rscript
+
 ## simulations/power_study_robust_heavy_tails.R
 ## Power study comparing PELT vs SVP (Wilcoxon) vs SVP (MedianMood) vs rfpop on heavy-tailed noise.
 ## - n = 1000
@@ -19,8 +19,14 @@ library(robseg)
 library(progressr)
 
 
+################################################################################
+
 ## generate_signal (copied/adapted from original study)
-generate_signal <- function(n, pattern = c("none", "up", "updown", "rand1"), nbSeg = 8, jumpSize = 1) {
+generate_signal <- function(n,
+                            pattern = c("none", "up", "updown", "rand1"),
+                            nbSeg = 8,
+                            jumpSize = 1)
+{
   type <- match.arg(pattern)
 
   if (type == "rand1") {
@@ -50,8 +56,13 @@ generate_signal <- function(n, pattern = c("none", "up", "updown", "rand1"), nbS
 }
 
 
+################################################################################
+
 ## cp_metrics: greedy 1-1 matching within tolerance
-cp_metrics <- function(cp_true, cp_est, tol = 5) {
+cp_metrics <- function(cp_true,
+                       cp_est,
+                       tol = 5)
+{
   cp_true <- as.integer(unlist(cp_true))
   cp_est  <- as.integer(unlist(cp_est))
 
@@ -62,9 +73,11 @@ cp_metrics <- function(cp_true, cp_est, tol = 5) {
   D <- abs(outer(cp_true, cp_est, "-"))
   matched_est <- rep(FALSE, length(cp_est))
   TP <- 0
-  for (i in seq_along(cp_true)) {
+  for (i in seq_along(cp_true))
+  {
     j <- which.min(D[i, ])
-    if (length(j) && D[i, j] <= tol && !matched_est[j]) {
+    if (length(j) && D[i, j] <= tol && !matched_est[j])
+    {
       TP <- TP + 1
       matched_est[j] <- TRUE
     }
@@ -79,6 +92,8 @@ cp_metrics <- function(cp_true, cp_est, tol = 5) {
 }
 
 
+################################################################################
+
 ## Threshold function for Median-Mood test (as provided)
 threshold_mood <- function(n, nbSeg, alpha = 0.01)
 {
@@ -87,6 +102,8 @@ threshold_mood <- function(n, nbSeg, alpha = 0.01)
   qchisq(1 - p_single, df = nbSeg)
 }
 
+
+################################################################################
 
 run_robust_power_study <- function(n = 1000,
                                    patterns = c("none", "up", "updown", "rand1"),
@@ -137,9 +154,9 @@ run_robust_power_study <- function(n = 1000,
           }
         }
 
-        # run SVP with Wilcoxon cost test using SVP_costTEsts
+        # run SVP with Wilcoxon cost test using SVP_costTests
         # gamma uses the inferred nbSeg_current through cp_true length already below
-        resW <- tryCatch(SVP_costTEsts(y, gamma = 1.5 * sqrt((n / nbSeg_current)^3 / 12), test = "WilcoxonCost"), error = function(e) NULL)
+        resW <- tryCatch(SVP_costTests(y, gamma = 1.5 * sqrt((n / nbSeg_current)^3 / 12), test = "WilcoxonCost"), error = function(e) NULL)
         cp_svp_wilk <- integer(0)
         if (!is.null(resW)) {
           if (is.list(resW) && !is.null(resW$changepoints)) cp_svp_wilk <- as.integer(unlist(resW$changepoints))
@@ -165,7 +182,7 @@ run_robust_power_study <- function(n = 1000,
         gamma_mood <- tryCatch(threshold_mood(n = n, nbSeg = nbSeg_current, alpha = 0.01), error = function(e) NULL)
         resM <- NULL
         if (!is.null(gamma_mood)) {
-          resM <- tryCatch(SVP_costTEsts(y, gamma = gamma_mood, test = "MedianMoodCost"), error = function(e) NULL)
+          resM <- tryCatch(SVP_costTests(y, gamma = gamma_mood, test = "MedianMoodCost"), error = function(e) NULL)
         }
         cp_svp_mood <- integer(0)
         if (!is.null(resM)) {
@@ -191,12 +208,12 @@ run_robust_power_study <- function(n = 1000,
         # Estimate standard deviation robustly using MAD
         est_sd <- mad(y, constant = 1.4826)
         res_rfpop <- tryCatch({
-          Rob_seg.std(x = y / est_sd, 
+          Rob_seg.std(x = y / est_sd,
                      loss = "Outlier",
                      lambda = 2 * log(length(y)),
                      lthreshold = 3)
         }, error = function(e) NULL)
-        
+
         cp_rfpop <- integer(0)
         if (!is.null(res_rfpop) && !is.null(res_rfpop$t.est)) {
           # Remove the final boundary from t.est
@@ -248,16 +265,19 @@ run_robust_power_study <- function(n = 1000,
   saveRDS(results_df, out_rds)
   message("Saved results to CSV: ", out_path)
   message("Saved full results (RDS) with changepoints to: ", out_rds)
-  
+
   # Return the full results_df with changepoints intact for use in plotting
   results_df
 }
 
+################################################################################
 
-plot_robust_power_metrics <- function(results_df) {
+plot_robust_power_metrics <- function(results_df)
+{
   dir.create(file.path("simulations", "plots_robust_heavy_tails"), recursive = TRUE, showWarnings = FALSE)
 
-  summarise_ci <- function(d) {
+  summarise_ci <- function(d)
+  {
     d %>% summarise(mean = mean(value, na.rm = TRUE),
                     sd = sd(value, na.rm = TRUE),
                     n = sum(!is.na(value)),
@@ -283,61 +303,73 @@ plot_robust_power_metrics <- function(results_df) {
       facet_wrap(~factor(pattern, levels = c("none", "up", "updown", "rand1")), scales = "fixed") +
       labs(x = "Jump size", y = m) +
       theme_minimal()
-    out <- file.path("simulations", "plots_robust_heavy_tails", paste0(tolower(gsub("[^A-Za-z0-9]","",m)), "_vs_jump_robust.pdf"))
+    out <- file.path("simulations", "plots", paste0(c("3_"),tolower(gsub("[^A-Za-z0-9]","",m)), "_vs_jump_robust.pdf"))
     ggsave(filename = out, plot = p, width = 10, height = 5)
     message("Saved plot: ", out)
   }
 }
 
 
-plot_robust_scenarios <- function(n = 1000, jumpSize = 0.75, nbSeg = 8) {
+################################################################################
+
+
+plot_robust_scenarios <- function(n = 1000,
+                                  jumpSize = 0.75,
+                                  nbSeg = 8)
+{
   dir.create(file.path("simulations", "plots_robust_heavy_tails"), recursive = TRUE, showWarnings = FALSE)
-  
+
   patterns <- c("none", "up", "updown", "rand1")
   set.seed(999)
-  
+
   # Generate clean and noisy signals with heavy-tailed noise
   signal_data <- lapply(patterns, function(pat) {
     mu <- generate_signal(n, pattern = pat, nbSeg = nbSeg, jumpSize = jumpSize)
     y <- mu + rt(length(mu), df = 2)  # t-distribution with df=2
     data.frame(t = seq_along(mu), y = y, mu = mu, pattern = pat)
   })
-  
+
   df_signals <- do.call(rbind, signal_data)
   df_signals$pattern <- factor(df_signals$pattern, levels = patterns)
   rownames(df_signals) <- NULL
-  
+
   p <- ggplot(df_signals) +
     geom_point(aes(x = t, y = y), alpha = 0.2) +
     geom_line(aes(x = t, y = mu), col = "red", linewidth = 0.8) +
     facet_wrap(~factor(pattern)) +
     labs(x = "Time (Index)", y = "Value") +
     theme_minimal()
-  
-  out <- file.path("simulations", "plots_robust_heavy_tails", "signal_scenarios_robust.pdf")
+
+  out <- file.path("simulations", "plots", "3_signal_scenarios_robust.pdf")
   ggsave(filename = out, plot = p, width = 10, height = 5)
   message("Saved plot: ", out)
   p
 }
 
 
-plot_robust_changepoint_distributions <- function(results_df, n_bins = 50, selected_jumpsize = 0.6) {
+################################################################################
+
+plot_robust_changepoint_distributions <- function(results_df,
+                                                  n_bins = 50,
+                                                  selected_jumpsize = 0.6)
+{
   # results_df should have columns: pattern, algorithm, jump, rep, changepoints (list-column)
   # Extract all changepoints across all replicates and create a histogram
-  
+
   dir.create(file.path("simulations", "plots_robust_heavy_tails"), recursive = TRUE, showWarnings = FALSE)
-  
+
   # Unnest changepoints and exclude the final boundary point (end of sequence)
   cp_data_list <- list()
-  for (i in seq_len(nrow(results_df))) {
+  for (i in seq_len(nrow(results_df)))
+  {
     row <- results_df[i, ]
     cps <- unlist(row$changepoints[[1]])
     pattern <- row$pattern
     algorithm <- row$algorithm
-    
+
     # Exclude the final boundary point
     cps_interior <- cps[cps < 1000]  # assuming sequence length is 1000
-    
+
     if (length(cps_interior) > 0) {
       cp_df <- data.frame(
         pattern = pattern,
@@ -348,11 +380,12 @@ plot_robust_changepoint_distributions <- function(results_df, n_bins = 50, selec
       cp_data_list[[length(cp_data_list) + 1]] <- cp_df
     }
   }
-  
-  if (length(cp_data_list) > 0) {
+
+  if (length(cp_data_list) > 0)
+  {
     cp_all <- do.call(rbind, cp_data_list)
     rownames(cp_all) <- NULL
-    
+
     # Create histogram with ggplot2
     p <- ggplot(cp_all |> filter(jump %in% selected_jumpsize, pattern != "none"), aes(x = changepoint)) +
       geom_histogram(bins = n_bins, fill = "steelblue", alpha = 0.7, color = "black") +
@@ -362,31 +395,43 @@ plot_robust_changepoint_distributions <- function(results_df, n_bins = 50, selec
            y = "Frequency of Detected Change") +
       theme_minimal() +
       theme(axis.text.x = element_text(angle = 45, hjust = 1))
-    
-    out <- file.path("simulations", "plots_robust_heavy_tails", "changepoint_distributions_robust.pdf")
+
+    out <- file.path("simulations", "plots", "3_changepoint_distributions_robust.pdf")
     ggsave(filename = out, plot = p, width = 14, height = 10)
     message("Saved plot: ", out)
     p
-  } else {
+  }
+  else
+  {
     message("No changepoints detected in any simulation.")
     NULL
   }
 }
 
 
+################################################################################
+################################################################################
+################################################################################
+################################################################################
+
 ## Self-contained run & plot
 DO_RUN <- TRUE
 DO_PLOT <- TRUE
 
-if (DO_RUN) {
-  results_df <- run_robust_power_study(n = 1000, 
-                                       patterns = c("none", "up", "updown", "rand1"), 
-                                       jumpSizes = seq(0.1, 4, by = 0.1), 
+if (DO_RUN)
+{
+  results_df <- run_robust_power_study(n = 1000,
+                                       patterns = c("none", "up", "updown", "rand1"),
+                                       jumpSizes = seq(0.1, 4, by = 0.1),
                                        reps = 100,
                                        nbSeg = 8)
 }
 
-if (DO_PLOT) {
+
+################################################################################
+
+if (DO_PLOT)
+{
   if (!exists("results_df")) {
     # Try to load from an RDS file that preserves the list-column
     rds_path <- file.path("simulations", "power_study_robust_heavy_tails_results.rds")
@@ -402,7 +447,7 @@ if (DO_PLOT) {
       stop("No results file found. Please run with DO_RUN=TRUE first.")
     }
   }
-  
+
   plot_robust_power_metrics(results_df)
   plot_robust_scenarios(n = 1000, jumpSize = 0.6, nbSeg = 8)
   plot_robust_changepoint_distributions(results_df, n_bins = 100, selected_jumpsize = 2)

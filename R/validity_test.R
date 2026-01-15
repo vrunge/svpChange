@@ -11,16 +11,16 @@
 #' @export
 valid_FOCUS <- function(y, gamma)
 {
-  res <- FOCuS::FOCuS(y, gamma)
+  for(i in 1:length(y))
+  {
+    res <- FOCuS::FOCuS(y[1:i], gamma)
 
-  if(res$changepoint == -1)
-  {
-    return(TRUE)
+    if(res$changepoint == -1)
+    {
+      return(TRUE)
+    }
   }
-  else
-  {
-    return(FALSE)
-  }
+  return(FALSE)
 }
 
 ################################################
@@ -62,7 +62,6 @@ valid_VAR <- function(y, gamma)
   {
     return(TRUE)
   }
-
   sum((y - mean(y))^2) <= gamma
 }
 

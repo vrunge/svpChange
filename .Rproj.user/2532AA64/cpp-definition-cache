@@ -58,7 +58,7 @@
     },
     {
         "file": "/Users/vrunge/Dropbox/Mon Mac (pc-20.home)/Desktop/Rpackages/svpChange/src/focus.cpp",
-        "file_last_write": 1764837911.0,
+        "file_last_write": 1768469090.0,
         "definitions": [
             {
                 "usr": "c:@F@prune#&$@S@Cost#&1$@S@CUSUM#&1d#b#",
@@ -66,17 +66,17 @@
                 "parent_name": "",
                 "name": "prune(Cost &, const CUSUM &, const double &, const bool)",
                 "file": "/Users/vrunge/Dropbox/Mon Mac (pc-20.home)/Desktop/Rpackages/svpChange/src/focus.cpp",
-                "line": 21,
+                "line": 20,
                 "column": 6,
                 "hidden": false
             },
             {
-                "usr": "c:@F@get_max#&1$@N@std@N@__1@S@unique_ptr>#$@S@Piece#$@N@std@N@__1@S@default_delete>#S2_#&1$@S@CUSUM#&1d#",
+                "usr": "c:@F@get_max#&1I#&1$@S@CUSUM#&1d#",
                 "kind": 6,
                 "parent_name": "",
-                "name": "get_max(const std::unique_ptr<Piece> &, const CUSUM &, const double &)",
+                "name": "get_max(const int &, const CUSUM &, const double &)",
                 "file": "/Users/vrunge/Dropbox/Mon Mac (pc-20.home)/Desktop/Rpackages/svpChange/src/focus.cpp",
-                "line": 94,
+                "line": 93,
                 "column": 8,
                 "hidden": false
             },
@@ -86,7 +86,7 @@
                 "parent_name": "",
                 "name": "get_max_all(const Cost &, const CUSUM &, const double &, const double &)",
                 "file": "/Users/vrunge/Dropbox/Mon Mac (pc-20.home)/Desktop/Rpackages/svpChange/src/focus.cpp",
-                "line": 99,
+                "line": 98,
                 "column": 8,
                 "hidden": false
             },
@@ -96,7 +96,7 @@
                 "parent_name": "",
                 "name": "get_tau_max(const Cost &, const CUSUM &, const double &, const double &)",
                 "file": "/Users/vrunge/Dropbox/Mon Mac (pc-20.home)/Desktop/Rpackages/svpChange/src/focus.cpp",
-                "line": 113,
+                "line": 112,
                 "column": 5,
                 "hidden": false
             },
@@ -106,7 +106,7 @@
                 "parent_name": "Info",
                 "name": "update(const double &)",
                 "file": "/Users/vrunge/Dropbox/Mon Mac (pc-20.home)/Desktop/Rpackages/svpChange/src/focus.cpp",
-                "line": 137,
+                "line": 136,
                 "column": 12,
                 "hidden": false
             }
@@ -115,7 +115,7 @@
     },
     {
         "file": "/Users/vrunge/Dropbox/Mon Mac (pc-20.home)/Desktop/Rpackages/svpChange/src/focus.h",
-        "file_last_write": 1764837911.0,
+        "file_last_write": 1768469090.0,
         "definitions": [
             {
                 "usr": "c:@S@CUSUM",
@@ -143,7 +143,7 @@
                 "parent_name": "Piece",
                 "name": "argmax(const CUSUM &)",
                 "file": "/Users/vrunge/Dropbox/Mon Mac (pc-20.home)/Desktop/Rpackages/svpChange/src/focus.h",
-                "line": 42,
+                "line": 43,
                 "column": 18,
                 "hidden": false
             },
@@ -153,7 +153,7 @@
                 "parent_name": "Piece",
                 "name": "set_shape(double)",
                 "file": "/Users/vrunge/Dropbox/Mon Mac (pc-20.home)/Desktop/Rpackages/svpChange/src/focus.h",
-                "line": 46,
+                "line": 47,
                 "column": 16,
                 "hidden": false
             },
@@ -163,7 +163,7 @@
                 "parent_name": "",
                 "name": "PieceGau",
                 "file": "/Users/vrunge/Dropbox/Mon Mac (pc-20.home)/Desktop/Rpackages/svpChange/src/focus.h",
-                "line": 52,
+                "line": 53,
                 "column": 8,
                 "hidden": false
             },
@@ -173,7 +173,7 @@
                 "parent_name": "PieceGau",
                 "name": "eval(const CUSUM &, double, const double &)",
                 "file": "/Users/vrunge/Dropbox/Mon Mac (pc-20.home)/Desktop/Rpackages/svpChange/src/focus.h",
-                "line": 53,
+                "line": 55,
                 "column": 10,
                 "hidden": false
             },
@@ -183,7 +183,7 @@
                 "parent_name": "",
                 "name": "PieceBer",
                 "file": "/Users/vrunge/Dropbox/Mon Mac (pc-20.home)/Desktop/Rpackages/svpChange/src/focus.h",
-                "line": 67,
+                "line": 70,
                 "column": 8,
                 "hidden": false
             },
@@ -193,7 +193,7 @@
                 "parent_name": "PieceBer",
                 "name": "eval(const CUSUM &, double, const double &)",
                 "file": "/Users/vrunge/Dropbox/Mon Mac (pc-20.home)/Desktop/Rpackages/svpChange/src/focus.h",
-                "line": 68,
+                "line": 72,
                 "column": 10,
                 "hidden": false
             },
@@ -203,7 +203,7 @@
                 "parent_name": "PieceBer",
                 "name": "argmax(const CUSUM &)",
                 "file": "/Users/vrunge/Dropbox/Mon Mac (pc-20.home)/Desktop/Rpackages/svpChange/src/focus.h",
-                "line": 81,
+                "line": 86,
                 "column": 10,
                 "hidden": false
             },
@@ -213,7 +213,7 @@
                 "parent_name": "",
                 "name": "PiecePoi",
                 "file": "/Users/vrunge/Dropbox/Mon Mac (pc-20.home)/Desktop/Rpackages/svpChange/src/focus.h",
-                "line": 95,
+                "line": 100,
                 "column": 8,
                 "hidden": false
             },
@@ -223,7 +223,7 @@
                 "parent_name": "PiecePoi",
                 "name": "eval(const CUSUM &, double, const double &)",
                 "file": "/Users/vrunge/Dropbox/Mon Mac (pc-20.home)/Desktop/Rpackages/svpChange/src/focus.h",
-                "line": 96,
+                "line": 102,
                 "column": 10,
                 "hidden": false
             },
@@ -233,7 +233,7 @@
                 "parent_name": "PiecePoi",
                 "name": "argmax(const CUSUM &)",
                 "file": "/Users/vrunge/Dropbox/Mon Mac (pc-20.home)/Desktop/Rpackages/svpChange/src/focus.h",
-                "line": 108,
+                "line": 114,
                 "column": 10,
                 "hidden": false
             },
@@ -243,7 +243,7 @@
                 "parent_name": "",
                 "name": "PieceGam",
                 "file": "/Users/vrunge/Dropbox/Mon Mac (pc-20.home)/Desktop/Rpackages/svpChange/src/focus.h",
-                "line": 120,
+                "line": 125,
                 "column": 8,
                 "hidden": false
             },
@@ -253,7 +253,7 @@
                 "parent_name": "PieceGam",
                 "name": "eval(const CUSUM &, double, const double &)",
                 "file": "/Users/vrunge/Dropbox/Mon Mac (pc-20.home)/Desktop/Rpackages/svpChange/src/focus.h",
-                "line": 122,
+                "line": 127,
                 "column": 10,
                 "hidden": false
             },
@@ -263,7 +263,7 @@
                 "parent_name": "PieceGam",
                 "name": "set_shape(double)",
                 "file": "/Users/vrunge/Dropbox/Mon Mac (pc-20.home)/Desktop/Rpackages/svpChange/src/focus.h",
-                "line": 133,
+                "line": 138,
                 "column": 8,
                 "hidden": false
             },
@@ -273,7 +273,7 @@
                 "parent_name": "PieceGam",
                 "name": "argmax(const CUSUM &)",
                 "file": "/Users/vrunge/Dropbox/Mon Mac (pc-20.home)/Desktop/Rpackages/svpChange/src/focus.h",
-                "line": 137,
+                "line": 142,
                 "column": 10,
                 "hidden": false
             },
@@ -283,7 +283,7 @@
                 "parent_name": "",
                 "name": "Cost",
                 "file": "/Users/vrunge/Dropbox/Mon Mac (pc-20.home)/Desktop/Rpackages/svpChange/src/focus.h",
-                "line": 144,
+                "line": 149,
                 "column": 8,
                 "hidden": false
             },
@@ -293,7 +293,7 @@
                 "parent_name": "",
                 "name": "Info",
                 "file": "/Users/vrunge/Dropbox/Mon Mac (pc-20.home)/Desktop/Rpackages/svpChange/src/focus.h",
-                "line": 155,
+                "line": 160,
                 "column": 8,
                 "hidden": false
             },
@@ -303,7 +303,7 @@
                 "parent_name": "Info",
                 "name": "statistic",
                 "file": "/Users/vrunge/Dropbox/Mon Mac (pc-20.home)/Desktop/Rpackages/svpChange/src/focus.h",
-                "line": 163,
+                "line": 168,
                 "column": 10,
                 "hidden": false
             }
@@ -346,7 +346,7 @@
     },
     {
         "file": "/Users/vrunge/Dropbox/Mon Mac (pc-20.home)/Desktop/Rpackages/svpChange/src/svp_costTests.cpp",
-        "file_last_write": 1764892733.0,
+        "file_last_write": 1768469057.0,
         "definitions": [],
         "hidden": false
     },

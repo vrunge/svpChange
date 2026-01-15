@@ -9,7 +9,7 @@
 using namespace Rcpp;
 
 // [[Rcpp::export]]
-List SVP_costTEsts(std::vector<double> data,
+List SVP_costTests(std::vector<double> data,
                   double gamma,
                   std::string test,
                   double quantile = 0.01)

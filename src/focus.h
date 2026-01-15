@@ -29,7 +29,8 @@ struct CUSUM {
 };
 
 
-struct Piece {
+struct Piece
+{
   double St = 0.0;
   int tau = 0;
   double m0 = 0.0;
@@ -49,8 +50,10 @@ struct Piece {
 
 };
 
-struct PieceGau:Piece {
-  double eval (const CUSUM& cs, double x, const double& theta0) const {
+struct PieceGau:Piece
+{
+  double eval (const CUSUM& cs, double x, const double& theta0) const
+  {
     auto c = (double)(cs.n - tau);
     auto S = (cs.Sn - St);
 
@@ -64,8 +67,10 @@ struct PieceGau:Piece {
   }
 };
 
-struct PieceBer:Piece {
-  double eval (const CUSUM& cs, double x, const double& theta0) const {
+struct PieceBer:Piece
+{
+  double eval (const CUSUM& cs, double x, const double& theta0) const
+  {
     auto c = (double)(cs.n - tau);
     auto S = (cs.Sn - St);
 
@@ -75,10 +80,11 @@ struct PieceBer:Piece {
       return S * log(x) + (c - S) * log((1-x)) + m0;
     else
       return S * log(x/theta0) + (c - S) * log((1-x) / (1 - theta0));
-
   }
+
   // this is to avoid nans that might be quite annoying in comparisons
-  double argmax (const CUSUM &cs ) const {
+  double argmax (const CUSUM &cs ) const
+  {
     auto agm = (cs.Sn - St) / (double)(cs.n - tau);
     if (agm == 0) {
       return 0.000000001;
@@ -87,12 +93,12 @@ struct PieceBer:Piece {
     } else {
       return agm;
     }
-
   }
 
 };
 
-struct PiecePoi:Piece {
+struct PiecePoi:Piece
+{
   double eval (const CUSUM& cs, double x, const double& theta0) const {
     auto c = (double)(cs.n - tau);
     auto S = (cs.Sn - St);
@@ -105,7 +111,8 @@ struct PiecePoi:Piece {
   }
 
   // this is to avoid nans that might be quite annoying in comparisons
-  double argmax (const CUSUM &cs ) const {
+  double argmax (const CUSUM &cs ) const
+  {
     auto agm = (cs.Sn - St) / (double)(cs.n - tau);
     if (agm == 0) {
       return 0.000000001;
@@ -113,8 +120,6 @@ struct PiecePoi:Piece {
       return agm;
     }
   }
-
-
 };
 
 struct PieceGam:Piece {

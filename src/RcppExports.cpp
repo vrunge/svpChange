@@ -76,9 +76,9 @@ BEGIN_RCPP
     return rcpp_result_gen;
 END_RCPP
 }
-// SVP_costTEsts
-List SVP_costTEsts(std::vector<double> data, double gamma, std::string test, double quantile);
-RcppExport SEXP _svpChange_SVP_costTEsts(SEXP dataSEXP, SEXP gammaSEXP, SEXP testSEXP, SEXP quantileSEXP) {
+// SVP_costTests
+List SVP_costTests(std::vector<double> data, double gamma, std::string test, double quantile);
+RcppExport SEXP _svpChange_SVP_costTests(SEXP dataSEXP, SEXP gammaSEXP, SEXP testSEXP, SEXP quantileSEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
     Rcpp::RNGScope rcpp_rngScope_gen;
@@ -86,7 +86,7 @@ BEGIN_RCPP
     Rcpp::traits::input_parameter< double >::type gamma(gammaSEXP);
     Rcpp::traits::input_parameter< std::string >::type test(testSEXP);
     Rcpp::traits::input_parameter< double >::type quantile(quantileSEXP);
-    rcpp_result_gen = Rcpp::wrap(SVP_costTEsts(data, gamma, test, quantile));
+    rcpp_result_gen = Rcpp::wrap(SVP_costTests(data, gamma, test, quantile));
     return rcpp_result_gen;
 END_RCPP
 }
@@ -111,7 +111,7 @@ static const R_CallMethodDef CallEntries[] = {
     {"_svpChange_SN", (DL_FUNC) &_svpChange_SN, 2},
     {"_svpChange_SVP", (DL_FUNC) &_svpChange_SVP, 4},
     {"_svpChange_svp0", (DL_FUNC) &_svpChange_svp0, 5},
-    {"_svpChange_SVP_costTEsts", (DL_FUNC) &_svpChange_SVP_costTEsts, 4},
+    {"_svpChange_SVP_costTests", (DL_FUNC) &_svpChange_SVP_costTests, 4},
     {"_svpChange_SVP_old", (DL_FUNC) &_svpChange_SVP_old, 4},
     {NULL, NULL, 0}
 };

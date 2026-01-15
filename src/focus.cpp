@@ -13,7 +13,6 @@
 
 # include "focus.h"
 
-
 /*
  * PRUNING FUNCTION checks and removes quadratics that are no longer optimal
  */

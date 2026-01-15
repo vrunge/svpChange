@@ -1,10 +1,9 @@
-#!/usr/bin/env Rscript
-## simulations/complexity_study.R
+
 ## Benchmarking PELT vs SVP computational cost
 ## Two experiments:
 ## 1) No-change signals, huge penalty (effectively never detect change) for increasing n up to 10000
 ## 2) Fixed n = 10000, increase number of equally-spaced large changes from 1..100
-##    SVP penalty = (1/avg_length_of_change) * log(n), PELT penalty = 2 * log(n)
+##  SVP penalty = (1/avg_length_of_change) * log(n), PELT penalty = 2 * log(n)
 
 library(future.apply)
 library(future)
@@ -14,29 +13,45 @@ library(ggplot2)
 library(dplyr)
 library(tidyr)
 
+
+################################################################################
+
 ## Utility: run algorithm and measure time + detected changepoints
-time_and_count_pelt <- function(data, penalty) {
+time_and_count_pelt <- function(data, penalty)
+{
   res <- list(time = NA_real_, nchanges = NA_integer_)
   t <- system.time({
     obj <- tryCatch(cpt.mean(data, method = "PELT", penalty = "Manual", pen.value = penalty),
                     error = function(e) NULL)
   })[['elapsed']]
+
   res$time <- ifelse(is.finite(t), t, NA_real_)
-  if (!is.null(obj)) {
+
+  if (!is.null(obj))
+  {
     ch <- tryCatch(cpts(obj), error = function(e) NULL)
     res$nchanges <- if (!is.null(ch)) length(as.integer(unlist(ch))) else NA_integer_
-    res$nchanges <- res$nchanges + 1 # including the last point at n 
+    res$nchanges <- res$nchanges + 1 # including the last point at n
   }
   res
 }
 
-time_and_count_svp <- function(data, penalty, cost = "gaussian_mean") {
+
+################################################################################
+
+time_and_count_svp <- function(data,
+                               penalty,
+                               cost = "gaussian_mean")
+{
   res <- list(time = NA_real_, nchanges = NA_integer_)
   t <- system.time({
     obj <- tryCatch(SVP(data, penalty, cost), error = function(e) NULL)
   })[['elapsed']]
+
   res$time <- ifelse(is.finite(t), t, NA_real_)
-  if (!is.null(obj)) {
+
+  if (!is.null(obj))
+  {
     ch <- NULL
     if (is.list(obj) && !is.null(obj$changepoints)) ch <- obj$changepoints
     if (is.null(ch)) ch <- tryCatch(obj$changepoints, error = function(e) NULL)
@@ -45,14 +60,18 @@ time_and_count_svp <- function(data, penalty, cost = "gaussian_mean") {
   res
 }
 
+################################################################################
+
 ## Experiment 1: no-change signals
 run_exp1 <- function(n_values = round(seq(500, 10000, length.out = 20)),
                      reps = 20,
                      penalty_large = 1000,
-                     seed = 123) {
+                     seed = 123)
+{
   set.seed(seed)
 
-  res_list <- lapply(n_values, function(n) {
+  res_list <- lapply(n_values, function(n)
+  {
     replicate(reps, {
       data <- rnorm(n, mean = 0, sd = 1)
       pelt <- time_and_count_pelt(data, penalty_large)
@@ -72,18 +91,22 @@ run_exp1 <- function(n_values = round(seq(500, 10000, length.out = 20)),
   df
 }
 
+################################################################################
+
 ## Experiment 2: fixed n, vary number of equally-spaced large changes
 run_exp2 <- function(n = 10000,
                      k_values = 1:100,
                      reps = 10,
                      gap = 10,
                      penalty_pelt = NULL,
-                     seed = 456) {
+                     seed = 456)
+{
   set.seed(seed)
 
   if (is.null(penalty_pelt)) penalty_pelt <- 2 * log(n)
 
-  bench_one_k <- function(k) {
+  bench_one_k <- function(k)
+  {
     # number of changepoints = k ; number of segments = k + 1
     seg_count <- k + 1
     base_seg_len <- floor(n / seg_count)
@@ -120,10 +143,11 @@ run_exp2 <- function(n = 10000,
   df
 }
 
-
+################################################################################
 
 ## Helper: summarise results (simple averages)
-summarise_results <- function(df, by = c("n")) {
+summarise_results <- function(df, by = c("n"))
+{
   library(dplyr)
   df %>% group_by(across(all_of(by))) %>%
     summarise(PELT_mean = mean(PELT, na.rm = TRUE),
@@ -131,13 +155,22 @@ summarise_results <- function(df, by = c("n")) {
               .groups = "drop")
 }
 
+
+################################################################################
+################################################################################
+################################################################################
+################################################################################
+
 ## Example: do not run both automatically; user can source and call
 
 ## Self-contained flags to run experiments and plot results
 DO_RUN <- TRUE
 DO_PLOT <- TRUE
 
-if (DO_RUN) {
+################################################################################
+
+if (DO_RUN)
+{
   ## Configure parallel plan so work is distributed across workers for all tasks
   RUN_WORKERS <- 4
   plan(multisession, workers = RUN_WORKERS)
@@ -153,78 +186,95 @@ if (DO_RUN) {
   plan(sequential)
 }
 
-if (DO_PLOT) {
+################################################################################
+
+if (DO_PLOT)
+{
   message("[complexity_study] Plotting results ...")
   dir.create(file.path("simulations", "plots"), recursive = TRUE, showWarnings = FALSE)
 
   # load data if not in memory
-  if (!exists("df1")) {
+  if (!exists("df1"))
+  {
     path1 <- file.path("simulations", "complexity_exp1_nochange.csv")
     if (file.exists(path1)) df1 <- read.csv(path1)
   }
-  if (!exists("df2")) {
+  if (!exists("df2"))
+  {
     path2 <- file.path("simulations", "complexity_exp2_vary_k.csv")
     if (file.exists(path2)) df2 <- read.csv(path2)
   }
 
   # Plot for Experiment 1: mean time vs n (log-log)
-  if (exists("df1") && nrow(df1) > 0) {
+  if (exists("df1") && nrow(df1) > 0)
+  {
     # Remove NA, NaN, or Inf values before fitting
-    df1_clean <- df1[is.finite(df1$PELT) & is.finite(df1$SVP) & 
+    df1_clean <- df1[is.finite(df1$PELT) & is.finite(df1$SVP) &
                       df1$PELT > 0 & df1$SVP > 0, ]
-    
+
     # Calculate slopes for PELT and SVP on log-log scale
-    if (nrow(df1_clean) > 2) {
+    if (nrow(df1_clean) > 2)
+    {
       fit_pelt <- lm(log(PELT) ~ log(n), data = df1_clean)
       fit_svp <- lm(log(SVP) ~ log(n), data = df1_clean)
       slope_pelt <- round(coef(fit_pelt)[2], 3)
       slope_svp <- round(coef(fit_svp)[2], 3)
-    } else {
+    }
+    else
+    {
       warning("Not enough valid data points to fit slopes")
       slope_pelt <- NA
       slope_svp <- NA
     }
-    
+
     p1 <- ggplot(df1, aes(x = n, y = PELT, color = "PELT")) +
       geom_smooth(method = "lm", formula = y ~ x, se = TRUE, alpha = 0.2) +
-      geom_smooth(data = df1, aes(x = n, y = SVP, color = "SVP"), 
+      geom_smooth(data = df1, aes(x = n, y = SVP, color = "SVP"),
                   method = "lm", formula = y ~ x, se = TRUE, alpha = 0.2) +
       scale_x_log10() + scale_y_log10() +
       labs(x = "n (log)", y = "Time (s, log)") +
       theme_minimal()
-    
+
     # Add slope annotations if valid
-    if (!is.na(slope_pelt)) {
-      p1 <- p1 + annotate("text", x = Inf, y = Inf, label = paste("PELT slope:", slope_pelt), 
+    if (!is.na(slope_pelt))
+    {
+      p1 <- p1 + annotate("text", x = Inf, y = Inf, label = paste("PELT slope:", slope_pelt),
                           hjust = 1.1, vjust = 20, color = "#F8766D", size = 4)
     }
-    if (!is.na(slope_svp)) {
-      p1 <- p1 + annotate("text", x = Inf, y = Inf, label = paste("SVP slope:", slope_svp), 
+    if (!is.na(slope_svp))
+    {
+      p1 <- p1 + annotate("text", x = Inf, y = Inf, label = paste("SVP slope:", slope_svp),
                           hjust = 1.1, vjust = 22, color = "#00BFC4", size = 4)
     }
-    ggsave(filename = file.path("simulations", "plots", "exp1_time_vs_n.pdf"), plot = p1, width = 8, height = 5)
-    message("[complexity_study] Saved plot: simulations/plots/exp1_time_vs_n.png")
-  } else {
+    ggsave(filename = file.path("simulations", "plots", "2_exp1_time_vs_n.pdf"), plot = p1, width = 8, height = 5)
+    message("[complexity_study] Saved plot: simulations/plots/2_exp1_time_vs_n.pdf")
+  } else
+  {
     message("[complexity_study] No data for Experiment 1 plotting (df1 missing).")
   }
 
   # Plot for Experiment 2: mean time vs k
-  if (exists("df2") && nrow(df2) > 0) {
+  if (exists("df2") && nrow(df2) > 0)
+  {
     p2 <- ggplot(df2, aes(x = k, y = PELT, color = "PELT")) +
       geom_smooth(method = "loess", se = TRUE, alpha = 0.2) +
-      geom_smooth(data = df2, aes(x = k, y = SVP, color = "SVP"), 
+      geom_smooth(data = df2, aes(x = k, y = SVP, color = "SVP"),
                   method = "loess", se = TRUE, alpha = 0.2) +
       labs(x = "Number of changepoints (k)", y = "Time (s)") +
       theme_minimal()
-    ggsave(filename = file.path("simulations", "plots", "exp2_time_vs_k.pdf"), plot = p2, width = 8, height = 5)
-    message("[complexity_study] Saved plot: simulations/plots/exp2_time_vs_k.png")
-  } else {
+    ggsave(filename = file.path("simulations", "plots", "2_exp2_time_vs_k.pdf"), plot = p2, width = 8, height = 5)
+    message("[complexity_study] Saved plot: simulations/plots/2_exp2_time_vs_k.pdf")
+  }
+  else
+  {
     message("[complexity_study] No data for Experiment 2 plotting (df2 missing).")
   }
 
   # New plot: runtime vs number of detected changes (combine both experiments)
-  if ((exists("df1") && nrow(df1) > 0) || (exists("df2") && nrow(df2) > 0)) {
-    build_long <- function(df) {
+  if ((exists("df1") && nrow(df1) > 0) || (exists("df2") && nrow(df2) > 0))
+  {
+    build_long <- function(df)
+    {
       if (is.null(df) || nrow(df) == 0) return(NULL)
       rows <- lapply(seq_len(nrow(df)), function(i) {
         r <- df[i, , drop = FALSE]
@@ -250,8 +300,8 @@ if (DO_PLOT) {
       labs(x = "Detected number of changes",
            y = "Time (s, log)") +
       theme_minimal()
-    ggsave(filename = file.path("simulations", "plots", "time_vs_detected_changes.pdf"), plot = p3, width = 8, height = 5)
-    message("[complexity_study] Saved plot: simulations/plots/time_vs_detected_changes.png")
+    ggsave(filename = file.path("simulations", "plots", "2_time_vs_detected_changes.pdf"), plot = p3, width = 8, height = 5)
+    message("[complexity_study] Saved plot: simulations/plots/2_time_vs_detected_changes.pdf")
   } else {
     message("[complexity_study] No data available to plot runtime vs detected changes.")
   }

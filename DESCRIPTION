@@ -1,16 +1,18 @@
 Package: svpChange
 Type: Package
-Title: smallest valid partitioning algorithm 
+Title: Smallest Valid Partitioning Algorithm (SVP)
 Version: 0.1.0
 Authors@R: c(
     person("Vincent", "Runge", email = "vincent.runge@univ-evry.fr", role = c("aut", "cre", "cph")),
     person("Alexandre", "Combeau", email = "alexandre.combeau.77@gmail.com", role = c("aut")),
+        person("Gaetano", "Romano", email = "g.romano@lancaster.ac.uk", role = c("aut")),
     person("Charles", "Truong", email = "ctruong@ens-paris-saclay.fr", role = c("ctb"))
             )
 Maintainer: Vincent Runge <vincent.runge@univ-evry.fr>
-Description: Segmenting a univariate time series using the smallest valid partitioning algorithm. 
-    This method is a new change-point detection algorithm realizing a local control of the quality of the segments. 
-License: MIT + file LICENSE
+Description: We segment a univariate time series using the Smallest Valid Partition algorithm. 
+    The method is a new change-point detection approach that enforces local segment quality through a validity test. 
+    A segment is declared valid if it passes the test; otherwise (i.e., if a change-point is detected) it is invalid and excluded from the final segmentation.
+License: GPL-3
 Encoding: UTF-8
 LazyData: true
 Imports: Rcpp (>= 1.0.10), methods

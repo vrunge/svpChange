@@ -17,9 +17,9 @@ test_that("test PELT result = OP result",
                                 sdNoise = 1)
             penalty <- 2 * log(n)
             ### OP
-            OPres <- OP(data, penalty)
+            OPres <-  svpChange::OP(data, penalty)
             ### PELT
-            PELTres <- PELT(data, penalty)
+            PELTres <- svpChange::PELT(data, penalty)
 
             expect_equal(OPres$changepoints, PELTres$changepoints)
           })

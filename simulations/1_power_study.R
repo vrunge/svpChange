@@ -1,6 +1,7 @@
-#!/usr/bin/env Rscript
-## simulations/power_study.R
-## Power study comparing SVP vs PELT on four scenarios from `scenarios test.R`.
+
+## simulations/1_power_study.R
+##
+## Power study comparing SVP vs PELT on four scenarios
 ## - n = 10000
 ## - patterns = c("none","up","updown","rand1")
 ## - jumpSize in 1:10
@@ -17,12 +18,17 @@ library(changepoint)
 library(svpChange)
 library(progressr)
 
+################################################################################
 
-## generate_signal (copied/adapted from scenarios test.R)
-generate_signal <- function(n, pattern = c("none", "up", "updown", "rand1"), nbSeg = 8, jumpSize = 1) {
+generate_signal <- function(n,
+                            pattern = c("none", "up", "updown", "rand1"),
+                            nbSeg = 8,
+                            jumpSize = 1)
+{
   type <- match.arg(pattern)
 
-  if (type == "rand1") {
+  if (type == "rand1")
+  {
     set.seed(42)
     rand1CP <- rpois(nbSeg, lambda = 10)
 
@@ -48,9 +54,13 @@ generate_signal <- function(n, pattern = c("none", "up", "updown", "rand1"), nbS
   )
 }
 
+################################################################################
 
 ## cp_metrics: greedy 1-1 matching within tolerance
-cp_metrics <- function(cp_true, cp_est, tol = 5) {
+cp_metrics <- function(cp_true,
+                       cp_est,
+                       tol = 5)
+{
   cp_true <- as.integer(unlist(cp_true))
   cp_est  <- as.integer(unlist(cp_est))
 
@@ -61,13 +71,16 @@ cp_metrics <- function(cp_true, cp_est, tol = 5) {
   D <- abs(outer(cp_true, cp_est, "-"))
   matched_est <- rep(FALSE, length(cp_est))
   TP <- 0
-  for (i in seq_along(cp_true)) {
+  for (i in seq_along(cp_true))
+  {
     j <- which.min(D[i, ])
-    if (length(j) && D[i, j] <= tol && !matched_est[j]) {
+    if (length(j) && D[i, j] <= tol && !matched_est[j])
+    {
       TP <- TP + 1
       matched_est[j] <- TRUE
     }
   }
+
   FP <- sum(!matched_est)
   FN <- length(cp_true) - TP
 
@@ -77,13 +90,15 @@ cp_metrics <- function(cp_true, cp_est, tol = 5) {
   list(Precision = precision, Recall = recall, F1 = f1)
 }
 
+################################################################################
 
 run_power_study <- function(n = 1000,
                             patterns = c("none", "up", "updown", "rand1"),
                             jumpSizes = 1:10,
                             reps = 30,
                             workers = max(1, future::availableCores() - 1),
-                            seed = 123) {
+                            seed = 123)
+{
   set.seed(seed)
   plan(multisession, workers = workers)
 
@@ -94,7 +109,9 @@ run_power_study <- function(n = 1000,
   with_progress({
     # one tick per replicate (combinations * reps)
     p <- progressor(steps = nrow(combos) * reps)
-    res_list <- future_lapply(seq_len(nrow(combos)), function(idx) {
+
+    res_list <- future_lapply(seq_len(nrow(combos)), function(idx)
+    {
       pattern <- combos$pattern[idx]
       jump <- combos$jump[idx]
       replicate(reps, {
@@ -202,16 +219,21 @@ run_power_study <- function(n = 1000,
   out_path <- file.path("simulations", "power_study_results.csv")
   write.csv(df_csv, out_path, row.names = FALSE)
   message("Saved results to: ", out_path)
-  
+
   # Return the full df with changepoints intact for use in plotting
   df
 }
 
 
-plot_power_metrics <- function(df) {
+################################################################################
+
+
+plot_power_metrics <- function(df)
+{
   dir.create(file.path("simulations", "plots"), recursive = TRUE, showWarnings = FALSE)
 
-  summarise_ci <- function(d) {
+  summarise_ci <- function(d)
+  {
     d %>% summarise(mean = mean(value, na.rm = TRUE),
                     sd = sd(value, na.rm = TRUE),
                     n = sum(!is.na(value)),
@@ -228,7 +250,8 @@ plot_power_metrics <- function(df) {
   stats <- long %>% group_by(algorithm, pattern, jump, metric) %>% do(summarise_ci(.)) %>% ungroup()
 
   metrics <- c("F1", "Precision", "Recall", "NumSegments", "MSE")
-  for (m in metrics) {
+  for (m in metrics)
+  {
     dat <- stats %>% filter(metric == m)
     p <- ggplot(dat, aes(x = jump, y = mean, color = algorithm, fill = algorithm)) +
       geom_ribbon(aes(ymin = lower, ymax = upper), alpha = 0.15, color = NA) +
@@ -237,61 +260,70 @@ plot_power_metrics <- function(df) {
       facet_wrap(~factor(pattern, levels = c("none", "up", "updown", "rand1")), scales = "fixed") +
       labs(x = "Jump size", y = m) +
       theme_minimal()
-    out <- file.path("simulations", "plots", paste0(tolower(gsub("[^A-Za-z0-9]","",m)), "_vs_jump.pdf"))
+    out <- file.path("simulations", "plots", paste0(c("1_"),tolower(gsub("[^A-Za-z0-9]","",m)), "_vs_jump.pdf"))
     ggsave(filename = out, plot = p, width = 10, height = 5)
     message("Saved plot: ", out)
   }
 }
 
+################################################################################
 
-plot_scenarios <- function(n = 1000, jumpSize = 0.75, nbSeg = 8) {
+plot_scenarios <- function(n = 1000,
+                           jumpSize = 0.75,
+                           nbSeg = 8)
+{
   dir.create(file.path("simulations", "plots"), recursive = TRUE, showWarnings = FALSE)
-  
+
   patterns <- c("none", "up", "updown", "rand1")
   set.seed(999)
-  
+
   # Generate clean and noisy signals
   signal_data <- lapply(patterns, function(pat) {
     mu <- generate_signal(n, pattern = pat, nbSeg = nbSeg, jumpSize = jumpSize)
     y <- mu + rnorm(length(mu), mean = 0, sd = 1)
     data.frame(t = seq_along(mu), y = y, mu = mu, pattern = pat)
   })
-  
+
   df_signals <- do.call(rbind, signal_data)
   df_signals$pattern <- factor(df_signals$pattern, levels = patterns)
   rownames(df_signals) <- NULL
-  
+
   p <- ggplot(df_signals) +
     geom_point(aes(x = t, y = y), alpha = 0.2) +
     geom_line(aes(x = t, y = mu), col = "red", linewidth = 0.8) +
     facet_wrap(~factor(pattern)) +
     labs(x = "Time (Index)", y = "Value") +
     theme_minimal()
-  
-  out <- file.path("simulations", "plots", "signal_scenarios.pdf")
+
+  out <- file.path("simulations", "plots", "1_signal_scenarios.pdf")
   ggsave(filename = out, plot = p, width = 10, height = 5)
   message("Saved plot: ", out)
   p
 }
 
+################################################################################
 
-plot_changepoint_distributions <- function(df, n_bins = 50, selected_jumpsize = 2) {
+plot_changepoint_distributions <- function(df,
+                                           n_bins = 50,
+                                           selected_jumpsize = 2)
+{
   # df should have columns: pattern, algorithm, jump, rep, changepoints (list-column)
   # Extract all changepoints across all replicates and create a histogram
-  
+
   dir.create(file.path("simulations", "plots"), recursive = TRUE, showWarnings = FALSE)
-  
+
   # Unnest changepoints and exclude the final boundary point (end of sequence)
   cp_data_list <- list()
-  for (i in seq_len(nrow(df))) {
+  for (i in seq_len(nrow(df)))
+  {
     row <- df[i, ]
     cps <- unlist(row$changepoints[[1]])
     pattern <- row$pattern
     algorithm <- row$algorithm
-    
+
     # Exclude the final boundary point
     cps_interior <- cps[cps < 1000]  # assuming sequence length is 1000
-    
+
     if (length(cps_interior) > 0) {
       cp_df <- data.frame(
         pattern = pattern,
@@ -302,11 +334,12 @@ plot_changepoint_distributions <- function(df, n_bins = 50, selected_jumpsize = 
       cp_data_list[[length(cp_data_list) + 1]] <- cp_df
     }
   }
-  
-  if (length(cp_data_list) > 0) {
+
+  if (length(cp_data_list) > 0)
+  {
     cp_all <- do.call(rbind, cp_data_list)
     rownames(cp_all) <- NULL
-    
+
     # Create histogram with ggplot2
     p <- ggplot(cp_all |> filter(jump %in% selected_jumpsize, pattern != "none"), aes(x = changepoint)) +
       geom_histogram(bins = n_bins, fill = "steelblue", alpha = 0.7, color = "black") +
@@ -316,8 +349,8 @@ plot_changepoint_distributions <- function(df, n_bins = 50, selected_jumpsize = 
            y = "Frequency of Detected Change") +
       theme_minimal() +
       theme(axis.text.x = element_text(angle = 45, hjust = 1))
-    
-    out <- file.path("simulations", "plots", "changepoint_distributions.pdf")
+
+    out <- file.path("simulations", "plots", "1_changepoint_distributions.pdf")
     ggsave(filename = out, plot = p, width = 14, height = 10)
     message("Saved plot: ", out)
     p
@@ -327,41 +360,57 @@ plot_changepoint_distributions <- function(df, n_bins = 50, selected_jumpsize = 
   }
 }
 
-
+################################################################################
+################################################################################
+################################################################################
+################################################################################
 
 ## Self-contained run & plot
 DO_RUN <- TRUE
 DO_PLOT <- TRUE
 
-if (DO_RUN) {
+if (DO_RUN)
+{
   df <- run_power_study(n = 1000, patterns = c("none", "up", "updown", "rand1"), jumpSizes = c(seq(0.1, 2, by = 0.1)), reps = 100)
 }
 
-if (DO_PLOT) {
-  if (!exists("df")) {
+################################################################################
+
+
+if (DO_PLOT)
+{
+  if (!exists("df"))
+  {
     # Try to load from an RDS file that preserves the list-column
     rds_path <- file.path("simulations", "power_study_results.rds")
     csv_path <- file.path("simulations", "power_study_results.csv")
-    if (file.exists(rds_path)) {
+    if (file.exists(rds_path))
+    {
       df <- readRDS(rds_path)
       message("Loaded results from RDS: ", rds_path)
-    } else if (file.exists(csv_path)) {
+    }
+    else if (file.exists(csv_path))
+    {
       message("Warning: CSV file found but it doesn't contain changepoints.")
       message("To generate plots with changepoint distributions, please re-run with DO_RUN=TRUE")
       df <- read.csv(csv_path)
-    } else {
+    }
+    else
+    {
       stop("No results file found. Please run with DO_RUN=TRUE first.")
     }
-  } else {
+  }
+  else
+  {
     # Save the full df with changepoints to RDS for future reloading
     rds_path <- file.path("simulations", "power_study_results.rds")
     saveRDS(df, rds_path)
     message("Saved full results (with changepoints) to: ", rds_path)
   }
-  
+
   plot_power_metrics(df)
   plot_scenarios(n = 1000, jumpSize = 0.6, nbSeg = 8)
-  
+
   plot_changepoint_distributions(df, n_bins = 100, selected_jumpsize = 0.6)
 
 }

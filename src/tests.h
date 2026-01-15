@@ -548,6 +548,7 @@ private:
 ///   3) For each t, R_A(t) = sum_{i<=t} rank[i].
 ///      W_t = R_A(t) - t * (n+1)/2.
 ///   4) Return max_t |W_t|.
+
 class WilcoxonCost : public TestBase
 {
 public:
