@@ -15,7 +15,7 @@ library(tidyr)
 library(purrr)
 library(changepoint)
 library(svpChange)
-library(robseg)
+library(robseg) #devtools::install_github("guillemr/robust-fpop", force = TRUE)
 library(progressr)
 
 
@@ -209,9 +209,9 @@ run_robust_power_study <- function(n = 1000,
         est_sd <- mad(y, constant = 1.4826)
         res_rfpop <- tryCatch({
           Rob_seg.std(x = y / est_sd,
-                     loss = "Outlier",
-                     lambda = 2 * log(length(y)),
-                     lthreshold = 3)
+                      loss = "Outlier",
+                      lambda = 2 * log(length(y)),
+                      lthreshold = 3)
         }, error = function(e) NULL)
 
         cp_rfpop <- integer(0)
@@ -274,7 +274,8 @@ run_robust_power_study <- function(n = 1000,
 
 plot_robust_power_metrics <- function(results_df)
 {
-  dir.create(file.path("simulations", "plots_robust_heavy_tails"), recursive = TRUE, showWarnings = FALSE)
+
+  dir.create(file.path("simulations", "plots"), recursive = TRUE, showWarnings = FALSE)
 
   summarise_ci <- function(d)
   {
@@ -286,26 +287,40 @@ plot_robust_power_metrics <- function(results_df)
                     upper = mean + 1.96 * se,
                     .groups = "drop")
   }
-
-  long <- results_df %>% pivot_longer(cols = c(Precision, Recall, F1, NumSegments, MSE), names_to = "metric", values_to = "value")
-  # Ensure pattern is a factor with consistent levels
+  long <- results_df %>%
+    pivot_longer(cols = c(Precision, Recall, F1, NumSegments, MSE),
+                 names_to = "metric", values_to = "value")
+    # Ensure pattern is a factor with consistent levels
   long$pattern <- factor(long$pattern, levels = c("none", "up", "updown", "rand1"))
+  stats_df <- long %>%
+    dplyr::group_by(algorithm, pattern, jump, metric) %>%
+    dplyr::summarise(
+      mean  = mean(value, na.rm = TRUE),
+      sd    = sd(value, na.rm = TRUE),
+      n     = sum(!is.na(value)),
+      se    = sd / sqrt(pmax(1, n)),
+      lower = mean - 1.96 * se,
+      upper = mean + 1.96 * se,
+      .groups = "drop"
+    )
 
-  stats <- long %>% group_by(algorithm, pattern, jump, metric) %>% do(summarise_ci(.)) %>% ungroup()
+  stopifnot("metric" %in% names(stats_df))
 
   metrics <- c("F1", "Precision", "Recall", "NumSegments", "MSE")
   for (m in metrics) {
-    dat <- stats %>% filter(metric == m)
+    dat <- dplyr::filter(stats_df, metric == m)
+
     p <- ggplot(dat, aes(x = jump, y = mean, color = algorithm, fill = algorithm)) +
       geom_ribbon(aes(ymin = lower, ymax = upper), alpha = 0.15, color = NA) +
-      geom_line(size = 1) +
+      geom_line(linewidth = 1) +
       geom_point(size = 1.5) +
       facet_wrap(~factor(pattern, levels = c("none", "up", "updown", "rand1")), scales = "fixed") +
       labs(x = "Jump size", y = m) +
       theme_minimal()
-    out <- file.path("simulations", "plots", paste0(c("3_"),tolower(gsub("[^A-Za-z0-9]","",m)), "_vs_jump_robust.pdf"))
+
+    out <- file.path("simulations", "plots",
+                     paste0("3_", tolower(gsub("[^A-Za-z0-9]", "", m)), "_vs_jump.pdf"))
     ggsave(filename = out, plot = p, width = 10, height = 5)
-    message("Saved plot: ", out)
   }
 }
 
@@ -317,7 +332,7 @@ plot_robust_scenarios <- function(n = 1000,
                                   jumpSize = 0.75,
                                   nbSeg = 8)
 {
-  dir.create(file.path("simulations", "plots_robust_heavy_tails"), recursive = TRUE, showWarnings = FALSE)
+  dir.create(file.path("simulations", "plots"), recursive = TRUE, showWarnings = FALSE)
 
   patterns <- c("none", "up", "updown", "rand1")
   set.seed(999)
@@ -356,7 +371,7 @@ plot_robust_changepoint_distributions <- function(results_df,
   # results_df should have columns: pattern, algorithm, jump, rep, changepoints (list-column)
   # Extract all changepoints across all replicates and create a histogram
 
-  dir.create(file.path("simulations", "plots_robust_heavy_tails"), recursive = TRUE, showWarnings = FALSE)
+  dir.create(file.path("simulations", "plots"), recursive = TRUE, showWarnings = FALSE)
 
   # Unnest changepoints and exclude the final boundary point (end of sequence)
   cp_data_list <- list()
@@ -386,15 +401,18 @@ plot_robust_changepoint_distributions <- function(results_df,
     cp_all <- do.call(rbind, cp_data_list)
     rownames(cp_all) <- NULL
 
-    # Create histogram with ggplot2
-    p <- ggplot(cp_all |> filter(jump %in% selected_jumpsize, pattern != "none"), aes(x = changepoint)) +
+    cp_plot <- cp_all |>
+      dplyr::filter(round(jump, 10) %in% round(selected_jumpsize, 10),
+                    pattern != "none")
+
+    p <- ggplot(cp_plot, aes(x = changepoint)) +
       geom_histogram(bins = n_bins, fill = "steelblue", alpha = 0.7, color = "black") +
       facet_grid(pattern ~ algorithm) +
       geom_vline(xintercept = seq(125, 875, by = 125), linetype = "dashed", color = "grey") +
-      labs(x = "Sequence Position (Time)",
-           y = "Frequency of Detected Change") +
+      labs(x = "Sequence Position (Time)", y = "Frequency of Detected Change") +
       theme_minimal() +
       theme(axis.text.x = element_text(angle = 45, hjust = 1))
+
 
     out <- file.path("simulations", "plots", "3_changepoint_distributions_robust.pdf")
     ggsave(filename = out, plot = p, width = 14, height = 10)
@@ -454,3 +472,4 @@ if (DO_PLOT)
 }
 
 ## End
+

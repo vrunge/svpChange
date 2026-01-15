@@ -246,25 +246,38 @@ plot_power_metrics <- function(df)
   long <- df %>% pivot_longer(cols = c(Precision, Recall, F1, NumSegments, MSE), names_to = "metric", values_to = "value")
   # Ensure pattern is a factor with consistent levels
   long$pattern <- factor(long$pattern, levels = c("none", "up", "updown", "rand1"))
+  stats_df <- long %>%
+    dplyr::group_by(algorithm, pattern, jump, metric) %>%
+    dplyr::summarise(
+      mean  = mean(value, na.rm = TRUE),
+      sd    = sd(value, na.rm = TRUE),
+      n     = sum(!is.na(value)),
+      se    = sd / sqrt(pmax(1, n)),
+      lower = mean - 1.96 * se,
+      upper = mean + 1.96 * se,
+      .groups = "drop"
+    )
 
-  stats <- long %>% group_by(algorithm, pattern, jump, metric) %>% do(summarise_ci(.)) %>% ungroup()
+  stopifnot("metric" %in% names(stats_df))
 
   metrics <- c("F1", "Precision", "Recall", "NumSegments", "MSE")
-  for (m in metrics)
-  {
-    dat <- stats %>% filter(metric == m)
+  for (m in metrics) {
+    dat <- dplyr::filter(stats_df, metric == m)
+
     p <- ggplot(dat, aes(x = jump, y = mean, color = algorithm, fill = algorithm)) +
       geom_ribbon(aes(ymin = lower, ymax = upper), alpha = 0.15, color = NA) +
-      geom_line(size = 1) +
+      geom_line(linewidth = 1) +
       geom_point(size = 1.5) +
       facet_wrap(~factor(pattern, levels = c("none", "up", "updown", "rand1")), scales = "fixed") +
       labs(x = "Jump size", y = m) +
       theme_minimal()
-    out <- file.path("simulations", "plots", paste0(c("1_"),tolower(gsub("[^A-Za-z0-9]","",m)), "_vs_jump.pdf"))
+
+    out <- file.path("simulations", "plots",
+                     paste0("1_", tolower(gsub("[^A-Za-z0-9]", "", m)), "_vs_jump.pdf"))
     ggsave(filename = out, plot = p, width = 10, height = 5)
-    message("Saved plot: ", out)
   }
 }
+
 
 ################################################################################
 
@@ -340,8 +353,13 @@ plot_changepoint_distributions <- function(df,
     cp_all <- do.call(rbind, cp_data_list)
     rownames(cp_all) <- NULL
 
+
     # Create histogram with ggplot2
-    p <- ggplot(cp_all |> filter(jump %in% selected_jumpsize, pattern != "none"), aes(x = changepoint)) +
+    cp_plot <- cp_all |>
+      dplyr::filter(round(jump, 10) %in% round(selected_jumpsize, 10),
+                    pattern != "none")
+
+    p <- ggplot(cp_plot, aes(x = changepoint)) +
       geom_histogram(bins = n_bins, fill = "steelblue", alpha = 0.7, color = "black") +
       facet_grid(pattern ~ algorithm) +
       geom_vline(xintercept = seq(125, 875, by = 125), linetype = "dashed", color = "grey") +
