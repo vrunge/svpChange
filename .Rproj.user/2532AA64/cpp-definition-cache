@@ -369,7 +369,7 @@
     },
     {
         "file": "/Users/vrunge/Dropbox/Mon Mac (pc-20.home)/Desktop/Rpackages/svpChange/src/tests.h",
-        "file_last_write": 1764894097.0,
+        "file_last_write": 1768469146.0,
         "definitions": [
             {
                 "usr": "c:@S@TestBase",
@@ -767,7 +767,7 @@
                 "parent_name": "",
                 "name": "WilcoxonCost",
                 "file": "/Users/vrunge/Dropbox/Mon Mac (pc-20.home)/Desktop/Rpackages/svpChange/src/tests.h",
-                "line": 551,
+                "line": 552,
                 "column": 7,
                 "hidden": false
             },
@@ -777,7 +777,7 @@
                 "parent_name": "WilcoxonCost",
                 "name": "update(double)",
                 "file": "/Users/vrunge/Dropbox/Mon Mac (pc-20.home)/Desktop/Rpackages/svpChange/src/tests.h",
-                "line": 556,
+                "line": 557,
                 "column": 8,
                 "hidden": false
             },
@@ -787,7 +787,7 @@
                 "parent_name": "WilcoxonCost",
                 "name": "statistic",
                 "file": "/Users/vrunge/Dropbox/Mon Mac (pc-20.home)/Desktop/Rpackages/svpChange/src/tests.h",
-                "line": 561,
+                "line": 562,
                 "column": 10,
                 "hidden": false
             },
@@ -797,7 +797,7 @@
                 "parent_name": "",
                 "name": "MedianMoodCost",
                 "file": "/Users/vrunge/Dropbox/Mon Mac (pc-20.home)/Desktop/Rpackages/svpChange/src/tests.h",
-                "line": 651,
+                "line": 652,
                 "column": 7,
                 "hidden": false
             },
@@ -807,7 +807,7 @@
                 "parent_name": "MedianMoodCost",
                 "name": "update(double)",
                 "file": "/Users/vrunge/Dropbox/Mon Mac (pc-20.home)/Desktop/Rpackages/svpChange/src/tests.h",
-                "line": 655,
+                "line": 656,
                 "column": 8,
                 "hidden": false
             },
@@ -817,7 +817,7 @@
                 "parent_name": "MedianMoodCost",
                 "name": "statistic",
                 "file": "/Users/vrunge/Dropbox/Mon Mac (pc-20.home)/Desktop/Rpackages/svpChange/src/tests.h",
-                "line": 659,
+                "line": 660,
                 "column": 10,
                 "hidden": false
             }

@@ -128,6 +128,11 @@ dev.off()
 length(resW$changepoints)
 length(resM$changepoints)
 
+length(resR$t.est)
+length(resM$changepoints)
 
+
+resR$t.est
+resM$changepoints
 
 
