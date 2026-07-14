@@ -64,12 +64,13 @@ cp_metrics <- function(cp_true,
   cp_true <- as.integer(unlist(cp_true))
   cp_est  <- as.integer(unlist(cp_est))
 
-  if (length(cp_true) == 0 && length(cp_est) == 0) return(list(Precision = NA_real_, Recall = NA_real_, F1 = NA_real_))
-  if (length(cp_true) == 0) return(list(Precision = 0, Recall = NA_real_, F1 = NA_real_))
-  if (length(cp_est) == 0) return(list(Precision = NA_real_, Recall = 0, F1 = NA_real_))
+  if (length(cp_true) == 0 && length(cp_est) == 0) return(list(Precision = NA_real_, Recall = NA_real_, F1 = NA_real_, LocalizationError=NA_real_))
+  if (length(cp_true) == 0) return(list(Precision = 0, Recall = NA_real_, F1 = NA_real_, LocalizationError=NA_real_))
+  if (length(cp_est) == 0) return(list(Precision = NA_real_, Recall = 0, F1 = NA_real_, LocalizationError=NA_real_))
 
   D <- abs(outer(cp_true, cp_est, "-"))
   matched_est <- rep(FALSE, length(cp_est))
+  matched_dist <- numeric(0)
   TP <- 0
   for (i in seq_along(cp_true))
   {
@@ -78,6 +79,7 @@ cp_metrics <- function(cp_true,
     {
       TP <- TP + 1
       matched_est[j] <- TRUE
+      matched_dist <- c(matched_dist, D[i, j])
     }
   }
 
@@ -87,7 +89,8 @@ cp_metrics <- function(cp_true,
   precision <- if ((TP + FP) > 0) TP / (TP + FP) else NA_real_
   recall    <- if ((TP + FN) > 0) TP / (TP + FN) else NA_real_
   f1 <- if (!is.na(precision) && !is.na(recall) && (precision + recall) > 0) 2 * precision * recall / (precision + recall) else NA_real_
-  list(Precision = precision, Recall = recall, F1 = f1)
+  loc_err <- if (length(cp_est)==length(cp_true)) max(matched_dist) else NA_real_
+  list(Precision = precision, Recall = recall, F1 = f1, LocalizationError = loc_err)
 }
 
 ################################################################################
@@ -176,6 +179,7 @@ run_power_study <- function(n = 1000,
         metrics_svp_bic <- cp_metrics(cp_true, cp_svp_bic, tol = round(n * 0.0025))
         nseg_svp_bic <- length(cp_svp_bic)
         mse_svp_bic <- NA_real_
+        nseg_true <- length(cp_true)
         if (length(cp_svp_bic) > 0) {
           mu_hat_svp_bic <- numeric(0)
           for (i in seq_along(cp_svp_bic)) {
@@ -198,6 +202,8 @@ run_power_study <- function(n = 1000,
           F1 = c(metrics_pelt$F1, metrics_svp$F1, metrics_svp_bic$F1),
           NumSegments = c(nseg_pelt, nseg_svp, nseg_svp_bic),
           MSE = c(mse_pelt, mse_svp, mse_svp_bic),
+          LocalizationError = c(metrics_pelt$LocalizationError, metrics_svp$LocalizationError, metrics_svp_bic$LocalizationError),
+          CorrectNumCP = c(nseg_pelt==nseg_true, nseg_svp==nseg_true, nseg_svp_bic==nseg_true),
           changepoints = list(cp_pelt, cp_svp, cp_svp_bic)
         )
         tib
@@ -243,7 +249,7 @@ plot_power_metrics <- function(df)
                     .groups = "drop")
   }
 
-  long <- df %>% pivot_longer(cols = c(Precision, Recall, F1, NumSegments, MSE), names_to = "metric", values_to = "value")
+  long <- df %>% pivot_longer(cols = c(Precision, Recall, F1, NumSegments, MSE, LocalizationError, CorrectNumCP), names_to = "metric", values_to = "value")
   # Ensure pattern is a factor with consistent levels
   long$pattern <- factor(long$pattern, levels = c("none", "up", "updown", "rand1"))
   stats_df <- long %>%
@@ -260,7 +266,7 @@ plot_power_metrics <- function(df)
 
   stopifnot("metric" %in% names(stats_df))
 
-  metrics <- c("F1", "Precision", "Recall", "NumSegments", "MSE")
+  metrics <- c("F1", "Precision", "Recall", "NumSegments", "MSE", "LocalizationError", "CorrectNumCP")
   for (m in metrics) {
     dat <- dplyr::filter(stats_df, metric == m)
 
