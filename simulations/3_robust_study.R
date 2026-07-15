@@ -66,12 +66,13 @@ cp_metrics <- function(cp_true,
   cp_true <- as.integer(unlist(cp_true))
   cp_est  <- as.integer(unlist(cp_est))
 
-  if (length(cp_true) == 0 && length(cp_est) == 0) return(list(Precision = NA_real_, Recall = NA_real_, F1 = NA_real_))
-  if (length(cp_true) == 0) return(list(Precision = 0, Recall = NA_real_, F1 = NA_real_))
-  if (length(cp_est) == 0) return(list(Precision = NA_real_, Recall = 0, F1 = NA_real_))
+  if (length(cp_true) == 0 && length(cp_est) == 0) return(list(Precision = NA_real_, Recall = NA_real_, F1 = NA_real_, LocalizationError = NA_real_))
+  if (length(cp_true) == 0) return(list(Precision = 0, Recall = NA_real_, F1 = NA_real_, LocalizationError = NA_real_))
+  if (length(cp_est) == 0) return(list(Precision = NA_real_, Recall = 0, F1 = NA_real_, LocalizationError = NA_real_))
 
   D <- abs(outer(cp_true, cp_est, "-"))
   matched_est <- rep(FALSE, length(cp_est))
+  matched_dist <- numeric(0)
   TP <- 0
   for (i in seq_along(cp_true))
   {
@@ -80,6 +81,7 @@ cp_metrics <- function(cp_true,
     {
       TP <- TP + 1
       matched_est[j] <- TRUE
+      matched_dist <- c(matched_dist, D[i, j])
     }
   }
   FP <- sum(!matched_est)
@@ -88,7 +90,8 @@ cp_metrics <- function(cp_true,
   precision <- if ((TP + FP) > 0) TP / (TP + FP) else NA_real_
   recall    <- if ((TP + FN) > 0) TP / (TP + FN) else NA_real_
   f1 <- if (!is.na(precision) && !is.na(recall) && (precision + recall) > 0) 2 * precision * recall / (precision + recall) else NA_real_
-  list(Precision = precision, Recall = recall, F1 = f1)
+  loc_err <- if (length(cp_est) == length(cp_true)) max(matched_dist) else NA_real_
+  list(Precision = precision, Recall = recall, F1 = f1, LocalizationError = loc_err)
 }
 
 
@@ -131,6 +134,7 @@ run_robust_power_study <- function(n = 1000,
         # Heavy-tailed noise: t-distribution with df=2
         y <- mu + rt(n, df = 2)
         cp_true <- c(which(diff(mu) != 0), length(mu))
+        nseg_true <- length(cp_true)
         # infer the actual number of segments in this scenario
         nbSeg_current <- length(cp_true)
 
@@ -240,6 +244,8 @@ run_robust_power_study <- function(n = 1000,
           F1 = c(metrics_pelt$F1, metrics_svp_wilk$F1, metrics_svp_mood$F1, metrics_rfpop$F1),
           NumSegments = c(nseg_pelt, nseg_svp_wilk, nseg_svp_mood, nseg_rfpop),
           MSE = c(mse_pelt, mse_svp_wilk, mse_svp_mood, mse_rfpop),
+          LocalizationError = c(metrics_pelt$LocalizationError, metrics_svp_wilk$LocalizationError, metrics_svp_mood$LocalizationError, metrics_rfpop$LocalizationError),
+          PropCorrectNumCP = c(nseg_pelt == nseg_true, nseg_svp_wilk == nseg_true, nseg_svp_mood == nseg_true, nseg_rfpop == nseg_true),
           changepoints = list(cp_pelt, cp_svp_wilk, cp_svp_mood, cp_rfpop)
         )
         tib
@@ -288,7 +294,7 @@ plot_robust_power_metrics <- function(results_df)
                     .groups = "drop")
   }
   long <- results_df %>%
-    pivot_longer(cols = c(Precision, Recall, F1, NumSegments, MSE),
+    pivot_longer(cols = c(Precision, Recall, F1, NumSegments, MSE, LocalizationError, PropCorrectNumCP),
                  names_to = "metric", values_to = "value")
     # Ensure pattern is a factor with consistent levels
   long$pattern <- factor(long$pattern, levels = c("none", "up", "updown", "rand1"))
@@ -306,7 +312,7 @@ plot_robust_power_metrics <- function(results_df)
 
   stopifnot("metric" %in% names(stats_df))
 
-  metrics <- c("F1", "Precision", "Recall", "NumSegments", "MSE")
+  metrics <- c("F1", "Precision", "Recall", "NumSegments", "MSE", "LocalizationError", "PropCorrectNumCP")
   for (m in metrics) {
     dat <- dplyr::filter(stats_df, metric == m)
 
