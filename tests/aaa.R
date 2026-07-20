@@ -1,0 +1,79 @@
+library(testthat)
+library(svpChange)
+library(exfocus.rcpp)
+
+n <- 50
+gap <- 5
+chpts = c(0.1,0.3,0.4,0.45,0.55,0.7,0.75,0.95,1)*n
+data <- tsGenerator(chpts = chpts,
+                    parameters = c(0,gap,0,gap,0,gap,0,gap,0),
+                    sdNoise = 1)
+bool <- TRUE
+
+gamma <- 7
+
+plot(data)
+
+res_svp0 <- svp0(data,
+                 gamma,
+                 test = valid_FOCUS, #valid_FOCUS_last
+                 prune_if_unvalid = bool)
+abline(v = res_svp0$changepoints, col = "red")
+
+res_svp <- SVP(data = data,
+               gamma = gamma,
+               test = "gaussian_mean",
+               prune_if_unvalid = bool)
+abline(v = res_svp$changepoints, col = "blue", lty = 2, lwd = 2)
+
+
+res_svp_old <- SVP_old(data = data,
+               gamma = gamma,
+               test = "gaussian_mean",
+               prune_if_unvalid = bool)
+abline(v = res_svp_old$changepoints, col = "green", lty = 3)
+
+
+expect_equal(res_svp$R, res_svp_old$R)
+
+
+cp <- 8
+est_cpts <- c(0, res_svp$changepoints)
+focus_offline(data[(est_cpts[cp]+1):est_cpts[cp+1] + 1], Inf)$stat
+
+
+
+cp <- 8
+est_cpts <- c(0, res_svp_old$changepoints)
+focus_offline(data[(est_cpts[cp]+1):est_cpts[cp+1] + 1], Inf)$stat
+
+
+# example with large sequence with no change
+
+n <- 1e4
+gap <- 5
+chpts = c(0.1,0.3,1)*n
+data <- tsGenerator(chpts = chpts,
+                    parameters = c(0,gap,0),
+                    sdNoise = 1)
+bool <- TRUE
+
+gamma <- 500
+
+plot(data)
+
+system.time(res_svp <- SVP(data = data,
+               gamma = gamma,
+               test = "gaussian_mean",
+               prune_if_unvalid = bool))
+abline(v = res_svp$changepoints, col = "blue", lty = 2, lwd = 2)
+
+
+system.time(res_svp_old <- SVP_old(data = data,
+                       gamma = gamma,
+                       test = "gaussian_mean",
+                       prune_if_unvalid = bool))
+abline(v = res_svp_old$changepoints, col = "green", lty = 3)
+
+
+expect_equal(res_svp$R, res_svp_old$R)
