@@ -439,8 +439,7 @@ class QuantileCost : public TestBase
 public:
   // x is the lower quantile level in (0, 0.5], typically
   explicit QuantileCost(double x)
-    : x_(x),
-      lower_(x),
+    : lower_(x),
       upper_(1.0 - x),
       q_low_(std::numeric_limits<double>::quiet_NaN()),
       q_high_(std::numeric_limits<double>::quiet_NaN()),
@@ -470,7 +469,6 @@ public:
   }
 
 private:
-  double x_;        // lower quantile level
   P2Quantile lower_; // estimator for q_x
   P2Quantile upper_; // estimator for q_{1-x}
   double q_low_;
@@ -570,45 +568,40 @@ public:
       return 0.0;
     }
 
-    struct Item {
-      double value;
-      std::size_t index; // original index
-    };
-
-    std::vector<Item> items(n);
+    items_.resize(n);
     for (std::size_t i = 0; i < n; ++i) {
-      items[i] = Item{values_[i], i};
+      items_[i] = Item{values_[i], i};
     }
 
     // Sort by value to assign ranks
-    std::sort(items.begin(), items.end(),
+    std::sort(items_.begin(), items_.end(),
               [](const Item& a, const Item& b) {
                 return a.value < b.value;
               });
 
     // rank[i] = rank of y_i (1-based, with average rank for ties)
-    std::vector<double> rank(n);
+    rank_.resize(n);
 
     std::size_t i = 0;
     while (i < n) {
       std::size_t j = i + 1;
       // group ties
-      while (j < n && items[j].value == items[i].value) {
+      while (j < n && items_[j].value == items_[i].value) {
         ++j;
       }
       // average rank for indices [i, j)
       // positions are i+1, ..., j (1-based)
       double r = (static_cast<double>(i + 1) + static_cast<double>(j)) / 2.0;
       for (std::size_t k = i; k < j; ++k) {
-        rank[items[k].index] = r;
+        rank_[items_[k].index] = r;
       }
       i = j;
     }
 
     // Prefix sums of ranks: prefix_rank[t] = sum_{i=0}^{t-1} rank[i]
-    std::vector<double> prefix_rank(n + 1, 0.0);
+    prefix_rank_.assign(n + 1, 0.0);
     for (std::size_t k = 0; k < n; ++k) {
-      prefix_rank[k + 1] = prefix_rank[k] + rank[k];
+      prefix_rank_[k + 1] = prefix_rank_[k] + rank_[k];
     }
 
     // Scan all possible splits t = 1..n-1, compute centered Wilcoxon
@@ -616,7 +609,7 @@ public:
     const double n_plus_1_over_2 = (static_cast<double>(n) + 1.0) / 2.0;
 
     for (std::size_t t = 1; t < n; ++t) {
-      double R_A = prefix_rank[t]; // sum of ranks in {0..t-1}
+      double R_A = prefix_rank_[t]; // sum of ranks in {0..t-1}
       double t_d = static_cast<double>(t);
       // Centered rank-sum: subtract expected sum under H0
       double W_t = R_A - t_d * n_plus_1_over_2;
@@ -630,7 +623,15 @@ public:
   }
 
 private:
+  struct Item {
+    double value;
+    std::size_t index; // original index
+  };
+
   std::vector<double> values_; // stores y_1..y_n
+  mutable std::vector<Item> items_;
+  mutable std::vector<double> rank_;
+  mutable std::vector<double> prefix_rank_;
 };
 
 

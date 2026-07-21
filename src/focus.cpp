@@ -31,13 +31,13 @@ void prune (Cost& Q, const CUSUM& cs, const double& theta0, const bool isRight)
   {
     if (isRight)
     {
-      cond = [cs, theta0](const std::unique_ptr<Piece>& q1, const std::unique_ptr<Piece>& q2)
+      cond = [cs](const std::unique_ptr<Piece>& q1, const std::unique_ptr<Piece>& q2)
       {
         return q1->argmax(cs) <= q2->argmax(cs);
       };
     } else
     {
-      cond = [cs, theta0](const std::unique_ptr<Piece>& q1, const std::unique_ptr<Piece>& q2)
+      cond = [cs](const std::unique_ptr<Piece>& q1, const std::unique_ptr<Piece>& q2)
       {
         return q1->argmax(cs) >= q2->argmax(cs);
       };
@@ -156,7 +156,7 @@ void Info::update(const double& y)
     Qr.ps[Qr.k]->m0 = m0val;
   } else
   {
-    Qr.ps.push_back(std::move(newP(cs.Sn, cs.n, m0val)));
+    Qr.ps.push_back(newP(cs.Sn, cs.n, m0val));
     Qr.k = Qr.ps.size() - 1;
   }
 
@@ -168,7 +168,7 @@ void Info::update(const double& y)
     Ql.ps[Ql.k]->m0 = m0val;
   } else
   {
-    Ql.ps.push_back(std::move(newP(cs.Sn, cs.n, m0val)));
+    Ql.ps.push_back(newP(cs.Sn, cs.n, m0val));
     Ql.k = Ql.ps.size() - 1;
   }
 }

@@ -36,6 +36,8 @@ struct Piece
   double m0 = 0.0;
   double Mdiff = 0.0;
 
+  virtual ~Piece() = default;
+
   // eval method has no generic, and it's distribution specific
   virtual double eval (const CUSUM& cs, double x, const double& theta0) const = 0;
 
@@ -171,11 +173,11 @@ struct Info {
     : newP(newP_), theta0(theta0_) {
     std::vector<std::unique_ptr<Piece>> initpsl;
     for (auto i = 0; i < 50; i++) {
-      initpsl.push_back(std::move(newP(0.0, 0, 0.0)));
+      initpsl.push_back(newP(0.0, 0, 0.0));
     }
     std::vector<std::unique_ptr<Piece>> initpsr;
     for (auto i = 0; i < 50; i++) {
-      initpsr.push_back(std::move(newP(0.0, 0, 0.0)));
+      initpsr.push_back(newP(0.0, 0, 0.0));
     }
     Cost initQl(std::move(initpsl), 0.0, 0);
     Cost initQr(std::move(initpsr), 0.0, 0);

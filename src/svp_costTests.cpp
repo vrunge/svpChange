@@ -1,224 +1,181 @@
 #include "tests.h"
 #include <Rcpp.h>
-#include <functional>
 #include <vector>
 #include <limits>
 #include <algorithm>
-#include <iterator> // for std::make_move_iterator
+#include <utility>
 
 using namespace Rcpp;
 
-// [[Rcpp::export]]
-List SVP_costTests(std::vector<double> data,
-                  double gamma,
-                  std::string test,
-                  double quantile = 0.01)
+namespace {
+
+inline double segment_cost(const std::vector<double>& S1,
+                           const std::vector<double>& S2,
+                           size_t s,
+                           size_t t)
 {
-  size_t n = data.size();
+  const double sum = S1[t] - S1[s];
+  return (S2[t] - S2[s]) - sum * sum / static_cast<double>(t - s);
+}
 
-  NumericMatrix R(n + 1, 3); // Q, K, s
-  R(0, 0) = 0.0;
-  R(0, 1) = 0.0;
-  R(0, 2) = 0.0;
+NumericMatrix build_R_matrix(const std::vector<double>& Q,
+                             const std::vector<size_t>& K,
+                             const std::vector<size_t>& previous)
+{
+  const size_t n = Q.size() - 1;
+  NumericMatrix R(n, 3);
+  for (size_t t = 1; t <= n; ++t) {
+    const size_t row = t - 1;
+    R(row, 0) = Q[t];
+    R(row, 1) = static_cast<double>(K[t]);
+    R(row, 2) = static_cast<double>(previous[t]);
+  }
+  return R;
+}
 
-  std::vector<size_t> nb(n); // nb of candidates examined at each t
+template <typename Test, typename... Args>
+List svp_cost_impl(const std::vector<double>& data,
+                   double gamma,
+                   Args&&... args)
+{
+  const size_t n = data.size();
 
-  std::vector<double> S1(n + 1, 0);
-  std::vector<double> S2(n + 1, 0);
-  for (size_t i = 0; i < n; i++)
-  {
+  std::vector<double> Q(n + 1, std::numeric_limits<double>::infinity());
+  std::vector<size_t> K(n + 1, std::numeric_limits<size_t>::max());
+  std::vector<size_t> previous(n + 1, 0);
+  Q[0] = 0.0;
+  K[0] = 0;
+
+  std::vector<size_t> nb(n);
+
+  std::vector<double> S1(n + 1, 0.0);
+  std::vector<double> S2(n + 1, 0.0);
+  for (size_t i = 0; i < n; ++i) {
     S1[i + 1] = S1[i] + data[i];
     S2[i + 1] = S2[i] + data[i] * data[i];
   }
 
-  // factory for tests
-  std::function<std::unique_ptr<TestBase>()> newTest;
-  if (test == "gaussian_mean")
-  {
-    newTest = []() { return std::make_unique<GaussianMean>();};
-  }
-  else if (test == "gamma_rate")
-  {
-    newTest = []() { return std::make_unique<GammaRate>(); };
-  }
-  else if (test == "gaussian_variance")
-  {
-    newTest = []() { return std::make_unique<GaussianVariance>(); };
-  }
-  else if (test == "quantileExact")
-  {
-    newTest = [quantile]() { return std::make_unique<QuantileCostExact>(quantile); };
-  }
-  else if (test == "quantile")
-  {
-    newTest = [quantile]() { return std::make_unique<QuantileCost>(quantile); };
-  }
-  else if (test == "varCost")
-  {
-    newTest = []() { return std::make_unique<varCost>(); };
-  }
-  else if (test == "WilcoxonCost")
-  {
-    newTest = []() { return std::make_unique<WilcoxonCost>(); };
-  }
-  else if (test == "MedianMoodCost")
-  {
-    newTest = []() { return std::make_unique<MedianMoodCost>(); };
-  }
-  else
-  {
-    stop("Unknown test type");
-  }
+  std::vector<size_t> index;
+  std::vector<Test> tests;
+  std::vector<size_t> last_updates;
+  index.reserve(n + 1);
+  tests.reserve(n + 1);
+  last_updates.reserve(n + 1);
+  index.push_back(0);
+  tests.emplace_back(args...);
+  last_updates.push_back(0);
 
+  for (size_t t = 1; t <= n; ++t) {
+    const size_t m = index.size();
+    nb[t - 1] = m;
 
+    double best_Q = std::numeric_limits<double>::infinity();
+    size_t best_K = std::numeric_limits<size_t>::max();
+    size_t best_s = 0;
+    size_t write = 0;
 
+    for (size_t k = 0; k < m; ++k) {
+      const size_t s = index[k];
+      const size_t candidate_K = K[s] + 1;
 
-
-  std::vector<size_t> INDEX = {0};  // Active candidates (starting points s)
-  std::vector<size_t> valid_INDEX;  // Candidates to keep for next iteration
-
-  std::vector<std::unique_ptr<TestBase>> TESTS;  // Test instances for each candidate
-  TESTS.push_back(newTest());
-
-  // track how far each test has been updated (last index applied)
-  std::vector<size_t> LAST_UPDATES;  // Last t value each test was updated to
-  LAST_UPDATES.push_back(0);
-
-  double best_Q;
-  size_t best_K;
-  size_t best_s = 0;
-  size_t s;
-  bool valid;
-  double candidate_Q;
-  size_t candidate_K;
-
-    // PRUNING BRANCH: Keep only valid candidates and use lexicographic order
-    for (size_t t = 1; t < n + 1; ++t)
-    {
-      // Rcpp::Rcout << "\n=== ITERATION t=" << t << " === Active candidates: " << INDEX.size() << std::endl;
-
-      nb[t - 1] = INDEX.size();  // Record number of active candidates at this t
-
-      best_Q = std::numeric_limits<double>::infinity();  // Best cost found
-      best_K = std::numeric_limits<size_t>::max();  // Best K (lexicographic: primary criterion)
-
-      valid_INDEX.clear();
-      valid_INDEX.reserve(INDEX.size());  // Pre-allocate to avoid repeated allocations
-      std::vector<std::unique_ptr<TestBase>> valid_TESTS;
-      valid_TESTS.reserve(INDEX.size());
-      std::vector<size_t> valid_LAST_UPDATES;
-      valid_LAST_UPDATES.reserve(INDEX.size());
-
-      for (size_t k = 0; k < INDEX.size(); ++k)
-      {
-        s = INDEX[k];  // Current candidate starting point
-        auto& test_instance = TESTS[k];
-        size_t last_up = LAST_UPDATES[k];
-
-        // PRE-CHECK: Compute candidate_K using lexicographic order
-        // K = number of segments = R(s,1) + 1. If K > best_K, skip remaining work
-        candidate_K = static_cast<size_t>(R(s, 1)) + 1;
-
-        // LEXICOGRAPHIC PRUNING: If candidate_K exceeds best_K found so far,
-        // we can skip updating and evaluating this candidate AND all remaining ones
-        // (because INDEX is kept in increasing order of R(s,1), so candidate_K will only increase)
-        if (candidate_K > best_K) {
-          // Rcpp::Rcout << "  [k=" << k << "] Lex-skip: candidate_K=" << candidate_K << " > best_K=" << best_K << " | Batch-appending k=" << k << "..." << (INDEX.size()-1) << std::endl;
-          // IMPORTANT: do NOT permanently discard the current candidate or the remaining ones.
-          // Append the current and all remaining candidates to the kept lists (without updating them now),
-          // then break out of the loop. They will be evaluated (caught-up) in future t.
-          valid_INDEX.insert(valid_INDEX.end(), INDEX.begin() + k, INDEX.end());
-
-          valid_TESTS.insert(valid_TESTS.end(),
-                             std::make_move_iterator(TESTS.begin() + k),
-                             std::make_move_iterator(TESTS.end()));
-
-          valid_LAST_UPDATES.insert(valid_LAST_UPDATES.end(),
-                                    LAST_UPDATES.begin() + k,
-                                    LAST_UPDATES.end());
-          break;  // Exit loop, remaining candidates will be re-evaluated in future iterations
-        }
-
-        // CATCH-UP: Update test statistic from last_up to current t
-        // (so test_instance->statistic() reflects the [s+1, t] segment)
-        if (last_up < t) {
-          // Rcpp::Rcout << "  [k=" << k << "] Catch-up from t=" << last_up << " to t=" << t << std::endl;
-          for (size_t u = last_up + 1; u <= t; ++u) {
-            test_instance->update(data[u - 1]);
-          }
-          last_up = t;
-        }
-
-        // EVALUATE CANDIDATE [s, t]
-        candidate_Q = R(s, 0) + (S2[t] - S2[s]) - (S1[t] - S1[s]) * (S1[t] - S1[s]) / (t - s);
-        candidate_K = static_cast<size_t>(R(s, 1)) + 1;  // K = # of segments
-
-        // VALIDITY TEST: Check if segment [s+1, t] passes the statistical test
-        valid = test_instance->statistic() < gamma;
-        // Rcpp::Rcout << "  [k=" << k << "] s=" << s << ": valid=" << valid << " stat=" << test_instance->statistic() << " K=" << candidate_K << " Q=" << candidate_Q << std::endl;
-
-        if (valid)
-        {
-          // KEEP: Valid candidate is retained for future iterations
-          valid_INDEX.push_back(s);
-          valid_TESTS.push_back(std::move(test_instance));
-          valid_LAST_UPDATES.push_back(last_up);
-
-          // LEXICOGRAPHIC UPDATE: Update best only if (K, Q) is lexicographically smaller
-          // Primary: minimize K (# segments)
-          // Secondary: minimize Q (cost) if K is tied
-          if (candidate_K < best_K || (candidate_K == best_K && candidate_Q < best_Q))
-          {
-            // Rcpp::Rcout << "    -> NEW BEST: K=" << candidate_K << " (prev=" << best_K << "), Q=" << candidate_Q << " (prev=" << best_Q << ")" << std::endl;
-            best_Q = candidate_Q;
-            best_K = candidate_K;
-            best_s = s;  // Best starting point for segment ending at t
+      if (candidate_K > best_K) {
+        for (size_t j = k; j < m; ++j, ++write) {
+          if (write != j) {
+            index[write] = index[j];
+            tests[write] = std::move(tests[j]);
+            last_updates[write] = last_updates[j];
           }
         }
-        // else: PRUNED (invalid candidate discarded, does not contribute to best_*)
+        break;
       }
 
+      size_t last_up = last_updates[k];
+      for (size_t u = last_up + 1; u <= t; ++u) {
+        tests[k].update(data[u - 1]);
+      }
+      last_up = t;
 
-      // STORE OPTIMAL SOLUTION AT t
-      // Rcpp::Rcout << "  OPTIMAL[t=" << t << "]: K=" << best_K << " Q=" << best_Q << " (best_s=" << best_s << ")" << std::endl;
-      R(t, 0) = best_Q;  // Optimal cost
-      R(t, 1) = best_K;  // Optimal number of segments
-      R(t, 2) = best_s;  // Optimal starting point of last segment
+      if (tests[k].statistic() < gamma) {
+        const double candidate_Q = Q[s] + segment_cost(S1, S2, s, t);
 
-      // PRUNE: Keep only valid candidates for next iteration
-      // This maintains the pruning strategy
-      INDEX.swap(valid_INDEX);
-      TESTS = std::move(valid_TESTS);
-      LAST_UPDATES = std::move(valid_LAST_UPDATES);
+        if (candidate_K < best_K ||
+            (candidate_K == best_K && candidate_Q < best_Q)) {
+          best_Q = candidate_Q;
+          best_K = candidate_K;
+          best_s = s;
+        }
 
-      // ADD NEW CANDIDATE: s = t (potential starting point for future segments)
-      TESTS.push_back(newTest());
-      LAST_UPDATES.push_back(t);  // New test is up-to-date to index t (no obs applied yet)
-      INDEX.push_back(t);
-      // Rcpp::Rcout << "  Added candidate s=" << t << " | Total candidates: " << INDEX.size() << std::endl;
+        if (write != k) {
+          index[write] = s;
+          tests[write] = std::move(tests[k]);
+        }
+        last_updates[write] = last_up;
+        ++write;
+      }
     }
 
-  // BACKTRACKING: Reconstruct changepoints using optimal starting points
-  // R(t, 2) = best_s = optimal starting point of segment ending at t
-  std::vector<size_t> changepoints;
-  changepoints.reserve(n / 2);  // Reserve space (typical case: O(log n) changepoints, but allocate safely)
-  size_t i = n;
-  // Rcpp::Rcout << "\n=== BACKTRACKING ==="  << std::endl;
-  while (i > 0)
-  {
-    // Rcpp::Rcout << "  t=" << i << " -> best_s=" << R(i, 2) << std::endl;
-    changepoints.push_back(i);
-    i = R(i, 2);  // Move to start of previous segment
+    index.resize(write);
+    tests.erase(tests.begin() + write, tests.end());
+    last_updates.resize(write);
+
+    Q[t] = best_Q;
+    K[t] = best_K;
+    previous[t] = best_s;
+
+    index.push_back(t);
+    tests.emplace_back(args...);
+    last_updates.push_back(t);
   }
 
+  std::vector<size_t> changepoints;
+  changepoints.reserve(n / 2 + 1);
+  for (size_t i = n; i > 0; i = previous[i]) {
+    changepoints.push_back(i);
+  }
   std::reverse(changepoints.begin(), changepoints.end());
-  std::reverse(INDEX.begin(), INDEX.end());
+  std::reverse(index.begin(), index.end());
 
   return List::create(
     _["changepoints"] = changepoints,
-    _["lastIndexSet"] = INDEX,
+    _["lastIndexSet"] = index,
     _["nb"] = nb,
     _["costQ"] = NULL,
-    _["R"] = R(Range(1, R.nrow() - 1), Range(0, R.ncol() - 1))
+    _["R"] = build_R_matrix(Q, K, previous)
   );
+}
+
+} // namespace
+
+// [[Rcpp::export]]
+List SVP_costTests(std::vector<double> data,
+                   double gamma,
+                   std::string test,
+                   double quantile = 0.01)
+{
+  if (test == "gaussian_mean") {
+    return svp_cost_impl<GaussianMean>(data, gamma);
+  }
+  if (test == "gamma_rate") {
+    return svp_cost_impl<GammaRate>(data, gamma);
+  }
+  if (test == "gaussian_variance") {
+    return svp_cost_impl<GaussianVariance>(data, gamma);
+  }
+  if (test == "quantileExact") {
+    return svp_cost_impl<QuantileCostExact>(data, gamma, quantile);
+  }
+  if (test == "quantile") {
+    return svp_cost_impl<QuantileCost>(data, gamma, quantile);
+  }
+  if (test == "varCost") {
+    return svp_cost_impl<varCost>(data, gamma);
+  }
+  if (test == "WilcoxonCost") {
+    return svp_cost_impl<WilcoxonCost>(data, gamma);
+  }
+  if (test == "MedianMoodCost") {
+    return svp_cost_impl<MedianMoodCost>(data, gamma);
+  }
+
+  stop("Unknown test type");
 }

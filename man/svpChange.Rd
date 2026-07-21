@@ -31,6 +31,7 @@ homogeneity rather than relying solely on a global penalized objective.
 
 Authors:
 \itemize{
+  \item Vincent Runge \email{vincent.runge@univ-evry.fr} [copyright holder]
   \item Alexandre Combeau \email{alexandre.combeau.77@gmail.com}
   \item Gaetano Romano \email{g.romano@lancaster.ac.uk}
 }
