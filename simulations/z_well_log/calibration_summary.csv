@@ -1,0 +1,7 @@
+"test","subtests","criterion","block_length","gamma","raw_quantile","target","calibration_recovery","validation_recovery","validation_lower","validation_upper","calibration_reps","validation_reps","calibration_seed","validation_seed"
+"MedianMood","right","maximum over all growing prefixes",20,64.3013842853462,64.3013842852462,0.99,0.99,0.9896,0.986388230891743,0.992060035363658,5000,5000,1001000,1002000
+"Wilcoxon","right","maximum over all growing prefixes",20,261882.000000262,261882,0.99,0.99,0.9908,0.98775116231898,0.993095261451752,5000,5000,1001000,1002000
+"MedianMood","right","maximum over all growing prefixes",35,84.8498438185069,84.8498438184069,0.99,0.99,0.9882,0.984809837743552,0.990840578077294,5000,5000,1016000,1017000
+"Wilcoxon","right","maximum over all growing prefixes",35,302231.000000302,302231,0.99,0.99,0.9888,0.985484887454235,0.991364607124278,5000,5000,1016000,1017000
+"MedianMood","right","maximum over all growing prefixes",64,116.785784957309,116.785784957192,0.99,0.99,0.9898,0.986614695073422,0.9922332641012,5000,5000,1045000,1046000
+"Wilcoxon","right","maximum over all growing prefixes",64,363742.000000364,363742,0.99,0.99,0.9896,0.986388230891743,0.992060035363658,5000,5000,1045000,1046000

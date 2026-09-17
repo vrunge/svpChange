@@ -1,0 +1,234 @@
+---
+title: "Review of SVP calibration for the well-log data"
+author: "svpChange simulation audit"
+date: "15 September 2026"
+output:
+  pdf_document:
+    toc: true
+    number_sections: true
+fontsize: 10pt
+geometry: margin=0.8in
+header-includes:
+  - \usepackage{booktabs}
+  - \usepackage{longtable}
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE, message = FALSE, warning = FALSE)
+review <- readRDS("well_log_review.rds")
+meta <- review$metadata
+observed <- review$observed$table
+calibration <- review$calibration$summary
+bootstrap_summary <- review$bootstrap_summary
+```
+
+# Recommendation
+
+For this data, the preferred calibrated configuration is
+
+```{r recommended-call, results='asis'}
+cat(
+  "```r\n",
+  "SVP(y, gamma = ", round(meta$selected_gamma, 3), ",\n",
+  "    test = \"MedianMoodCost\", subtests = \"right\", ",
+  "cost = \"gaussian\")\n",
+  "```",
+  sep = ""
+)
+```
+
+The threshold is the empirical 0.99 quantile of the maximum Median--Mood
+statistic over every growing prefix under a dependence-preserving residual
+block bootstrap. This is exactly the one-segment criterion for `right`; it is
+not selected to maximize agreement with RFPOP. The recommendation changes the
+current application from `both` to `right`, removes the oracle segment count,
+and accounts for serial dependence.
+
+# Existing analysis and literature benchmark
+
+The current application contains two incompatible oracle segment counts: 30
+for Wilcoxon and 10 for Median--Mood. Its Mood threshold also uses a
+$\chi^2_{K}$ quantile, although the Pearson statistic has one degree of
+freedom. Neither construction accounts for the substantial serial dependence
+remaining in the well-log data.
+
+The external benchmark is the existing RFPOP fit with biweight loss,
+`lambda = 70`, and `lthreshold = 2`. This reproduces the application of
+[Fearnhead and Rigaill (2019)](https://doi.org/10.1080/01621459.2017.1385466),
+who use a threshold of twice the estimated noise scale and a penalty of 70
+estimated noise variances. It gives the following internal changepoints:
+
+```{r reference}
+review$reference
+```
+
+RFPOP is treated as an external benchmark, not ground truth. In particular,
+using a first-difference MAD rather than the package application's global MAD
+adds a short segment near positions 1034--1069. The 19-change analysis in
+[Wilms, Killick, and Matteson (2022)](https://doi.org/10.1080/10618600.2021.2000873)
+is not a compatible gold standard: it analyzes a 1,000-observation subset with
+Gaussian PELT and emphasizes the instability of that segmentation.
+
+```{r rfpop-sensitivity}
+knitr::kable(
+  review$rfpop_scale_sensitivity[, c(
+    "scale_method", "scale", "n_changepoints"
+  )],
+  digits = 2, booktabs = TRUE,
+  caption = "Sensitivity of the RFPOP benchmark to noise-scale estimation."
+)
+```
+
+The global-MAD fit gives changes at
+`r gsub(",", ", ", review$rfpop_scale_sensitivity$changepoints[review$rfpop_scale_sensitivity$scale_method == "package_global_mad"])`.
+The first-difference-MAD fit gives changes at
+`r gsub(",", ", ", review$rfpop_scale_sensitivity$changepoints[review$rfpop_scale_sensitivity$scale_method == "first_difference_mad"])`.
+
+# Null calibration
+
+We subtract the median in each RFPOP segment and resample residual blocks that
+do not cross a reference boundary. The block length is the first lag followed
+by five residual autocorrelations inside $\pm1.96/\sqrt{n}$; this gives
+`r meta$selected_block_length`. Calibration and independent validation use
+`r format(meta$calibration_reps, big.mark = ",")` series each, with block
+lengths 20 and 64 included as sensitivity checks. A null series is counted as
+correct only when the complete `right` run returns one segment.
+
+```{r calibration-table}
+display_calibration <- calibration
+display_calibration$gamma <- round(display_calibration$gamma, 3)
+for (column in c("calibration_recovery", "validation_recovery",
+                 "validation_lower", "validation_upper")) {
+  display_calibration[[column]] <- round(display_calibration[[column]], 4)
+}
+knitr::kable(
+  display_calibration[, c(
+    "test", "block_length", "gamma", "calibration_recovery",
+    "validation_recovery", "validation_lower", "validation_upper"
+  )],
+  booktabs = TRUE,
+  caption = "Block-bootstrap null calibration and independent validation."
+)
+```
+
+```{r null-figure, out.width="95%", fig.align="center"}
+knitr::include_graphics("plots/02_null_calibration.pdf")
+```
+
+The Wilcoxon scan is strongly inflated by the residual dependence. Its
+calibrated threshold is therefore large and retains only the most prominent
+transitions. The oracle-$K$ Wilcoxon scaling used in the power experiment is
+not suitable for this real-data application.
+
+The same threshold cannot be described as a `both` calibration. In that mode,
+an invalid interior candidate can remove the one-segment candidate even when
+all full-prefix tests pass. The direct stress check below therefore reports
+the actual `both` one-segment rate at the `right` threshold.
+
+```{r both-null-table}
+knitr::kable(
+  review$both_null_stress[, c(
+    "subtests", "gamma", "one_segment_recovery", "lower", "upper", "reps"
+  )],
+  digits = 3, booktabs = TRUE,
+  caption = paste0(
+    "Direct null stress check for both over ", meta$both_null_reps,
+    " dependent bootstrap series."
+  )
+)
+```
+
+# Observed segmentations
+
+All comparisons below remove the terminal endpoint and use one-to-one matching
+within 10 observations. These scores measure agreement with RFPOP rather than
+accuracy against known geological boundaries.
+
+```{r observed-table}
+display_observed <- observed[, c(
+  "method", "n_changepoints", "matched", "precision", "recall", "F1"
+)]
+display_observed$method <- sub("Calibrated SVP ", "SVP ",
+                               display_observed$method, fixed = TRUE)
+knitr::kable(
+  display_observed, digits = 3, booktabs = TRUE,
+  caption = "Observed-data agreement with the external RFPOP benchmark."
+)
+```
+
+```{r segmentation-figure, out.width="100%", fig.align="center"}
+knitr::include_graphics("plots/01_segmentations.pdf")
+```
+
+The calibrated `right` fit matches seven of the ten RFPOP boundaries and adds
+one SVP-only candidate near 3744. It merges several short neighboring segments
+in the 2400--2600 cluster; this is the cost of controlling false segmentation
+under the strongly dependent null. At the same threshold, `both` does not
+improve agreement because some clustered boundaries shift outside the matching
+tolerance. The legacy Mood and Wilcoxon settings over-segment substantially.
+
+# Mode and threshold sensitivity
+
+The signal bootstrap adds independently resampled residual blocks to the
+piecewise-median RFPOP signal. It is therefore a model-assisted comparison of
+the two SVP modes, not independent geological validation.
+
+```{r bootstrap-table}
+display_bootstrap <- bootstrap_summary[, c(
+  "mode", "mean_precision", "mean_recall", "mean_F1",
+  "mean_changepoints", "reps"
+)]
+names(display_bootstrap) <- c(
+  "mode", "precision", "recall", "F1", "mean CPs", "reps"
+)
+knitr::kable(
+  display_bootstrap, digits = 3, booktabs = TRUE,
+  caption = paste0(
+    "Mode comparison over ", meta$power_reps,
+    " signal-plus-residual bootstrap series."
+  )
+)
+```
+
+Across these replicates, `right` has mean F1
+`r sprintf("%.3f", bootstrap_summary$mean_F1[bootstrap_summary$mode == "right"])`,
+compared with
+`r sprintf("%.3f", bootstrap_summary$mean_F1[bootstrap_summary$mode == "both"])`
+for `both` at the same threshold.
+
+```{r bootstrap-figure, out.width="95%", fig.align="center"}
+knitr::include_graphics("plots/03_mode_bootstrap.pdf")
+```
+
+```{r frequency-figure, out.width="98%", fig.align="center"}
+knitr::include_graphics("plots/04_selection_frequency.pdf")
+```
+
+```{r threshold-figure, out.width="95%", fig.align="center"}
+knitr::include_graphics("plots/05_threshold_sensitivity.pdf")
+```
+
+# Interpretation and limitations
+
+The calibrated Median--Mood `right` configuration is the defensible replacement
+for the current application settings: it removes the unknown oracle segment
+count and controls the whole-series null false-segmentation probability while
+retaining the main RFPOP transitions. The `both` mode can look closer to RFPOP
+at a lower threshold, but the null experiment shows that this comes from
+uncontrolled interior-subsegment multiplicity rather than better calibration.
+
+This remains an empirical recommendation. RFPOP is not geological ground
+truth, and the bootstrap null is conditional on its fitted segmentation. The
+`right` result is also direction-dependent; the reverse-series comparison is
+reported in the CSV output. Exact pruning equivalence for the Median--Mood
+validity rule has not been proved. Finally, the Gaussian segment cost is only
+SVP's tie-breaker among partitions with the same number of segments; a robust
+tie-breaking cost is a separate possible extension.
+
+# Reproducibility
+
+The analysis used `svpChange` `r meta$svpChange_version` from
+`r meta$svpChange_library`, `robseg` `r meta$robseg_version`, data length
+`r meta$n`, and data SHA-256 fingerprint `r meta$data_sha256`. Calibration,
+validation, and signal-bootstrap seeds are `r meta$calibration_seed`,
+`r meta$validation_seed`, and `r meta$power_seed`, respectively.

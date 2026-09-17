@@ -1,0 +1,12 @@
+timestamp = 2026-09-16 15:34:38 UTC
+svpChange = 0.2.0
+changepoint = 2.3
+R = R version 4.6.1 (2026-06-24)
+platform = aarch64-apple-darwin23
+machine = arm64
+system = Darwin 25.6.0
+git_sha = 5932b1ca9aae015297f072eed397d59d768b4609
+n_grid = 256 to 16384 (24 values); fixed_n = 10000; k_grid = 0:100
+replicates = PELT/right/both: 12; none: 48
+timer = proc.time elapsed; adaptive batching target 0.05 s
+simulation_elapsed_seconds = 2877.633

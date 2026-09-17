@@ -1,0 +1,18 @@
+timestamp = 2026-09-17 12:44:46 UTC
+svpChange = 0.2.0
+DeCAFS = 3.3.6
+changepoint = 2.3
+R = R version 4.6.1 (2026-06-24)
+platform = aarch64-apple-darwin23
+git_sha = 5932b1ca9aae015297f072eed397d59d768b4609
+noise = stationary Gaussian AR(1), rho = 0.8, marginal variance = 1
+vary_n results and DeCAFS/SVP vary_k results reused
+PELT vary_k = 0:99; fixed_n = 2000; jump = 10
+PELT replicates = 16 for each method and k
+PELT timer batch target = 0.2 s
+displayed detected-segment range = 1:100
+pelt_simulation_elapsed_seconds = 1323.181
+selected_approximate_c = 0.9
+selected_decafs_c = 2.75
+selected_svp_c = 1.95
+PELT inflated = 3 * log(n) * (1 + rho) / (1 - rho)

@@ -1,0 +1,8 @@
+PELT-only fixed-n timing refresh
+date = 2026-09-17
+study = Gaussian timing, varying true changes
+n = 10000; k = 0:100; replicates = 12
+data_seed = 456 + 100000 + k * 100 + rep
+method = changepoint::cpt.mean, penalty = 2 * log(n)
+timing = isolated PELT pass; target batch duration = 0.05 seconds
+purpose = replace the original PELT varying-k rows affected by timing excursions

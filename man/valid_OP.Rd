@@ -9,14 +9,25 @@ valid_OP(y, gamma)
 \arguments{
 \item{y}{A numeric vector representing a segment of the signal.}
 
-\item{gamma}{A numeric threshold for penalizing the introduction of a new segment}
+\item{gamma}{A numeric threshold for penalizing the introduction of a new
+segment.}
 }
 \value{
-TRUE if the segment cannot be split into two parts with lower (penalized) cost.
+TRUE if the segment cannot be split into two parts with lower
+(penalized) cost.
 }
 \description{
-Tests whether the total cost of the segment is smaller than the best two-part penalized segmentation cost.
+Tests whether the total cost of the segment is smaller than
+the best two-part penalized segmentation cost.
 }
 \details{
 Optimal Partitioning Cost Test
+}
+\examples{
+set.seed(1)
+data <- ts_generator(
+  chpts = c(20, 40), parameters = c(0, 2),
+  sd_noise = 1, type = "gauss"
+)
+valid_OP(data, gamma = 2 * log(length(data)))
 }

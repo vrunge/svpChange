@@ -8,21 +8,40 @@ using namespace Rcpp;
 //' Optimal Partitioning Algorithm
 //'
 //' @title Optimal Partitioning Algorithm
-//' @description This function implements the OP algorithm of a given vector `data` with a given penalty term.
-//' It finds the optimal change points that minimize a penalized cost using dynamic programming.
+//' @description Finds the least-squares segmentation minimizing the sum of
+//' within-segment squared errors plus `penalty` times the number of estimated
+//' change points.
 //'
 //' @param data A numeric vector representing the data to segment.
-//' @param penalty A double value representing the penalty term for adding a new segment.
+//' @param penalty Numeric penalty applied to each estimated change point.
 //'
-//' @return A list with (1) the `\code{changepoints}` elements, (2) a vector `\code{nb}` saving the number of non-pruned elements at each iteration, (3) a vector `\code{lastIndexSet}` containing the non-pruned indices at the end of the algo and (4) a vector `\code{costQ}` saving the optimal cost at each time step. The elements `\code{nb}` and `\code{lastIndexSet}` are set to NULL. They are included for consistency with other algorithms that prune the number of indices to be tracked over time.
+//' @details A candidate boundary `s` and endpoint `t` represent the R segment
+//' `data[(s + 1):t]`. Setting the initial cost to `-penalty` makes the total
+//' penalty equal to `penalty * (K - 1)` for a partition with `K` segments.
+//'
+//' @return A list with the following components:
+//' \describe{
+//'   \item{changepoints}{Increasing, one-based, inclusive segment endpoints,
+//'     including `length(data)`.}
+//'   \item{lastIndexSet}{Always `NULL`; OP does not prune candidates.}
+//'   \item{nb}{Always `NULL`; OP does not prune candidates.}
+//'   \item{costQ}{Numeric vector of length `length(data)`. Element `t` is the
+//'     minimum penalized cost for `data[1:t]`.}
+//' }
 //'
 //' @examples
-//' n <- 1000
-//' data <- rep(c(0, 1, -0.5, 0), each = n) + rnorm(4 * n)
+//' set.seed(1)
+//' data <- ts_generator(
+//'   chpts = c(40, 80, 120), parameters = c(0, 2, -1),
+//'   sd_noise = 1, type = "gauss"
+//' )
 //' penalty <- 2 * log(length(data))
 //' OPres <- OP(data, penalty)
 //' OPres$changepoints
 //'
+//' @seealso [PELT()] for the pruned version of the same objective, [SN()] for
+//'   fixed numbers of segments, and [SVP()] for validity-constrained
+//'   partitioning.
 //' @export
 // [[Rcpp::export]]
 List OP(std::vector<double> data, double penalty)
@@ -74,23 +93,22 @@ List OP(std::vector<double> data, double penalty)
   // BACKTRACKING
   //
   // Change points reconstruction
-  std::vector<size_t> changepoints;
+  std::vector<int> changepoints;
   size_t i = n;
   while (lastChange[i] > 0)
   {
-    changepoints.push_back(lastChange[i]);
+    changepoints.push_back(static_cast<int>(lastChange[i]));
     i = lastChange[i];
   }
   std::reverse(changepoints.begin(), changepoints.end());
-  changepoints.push_back(n);
+  changepoints.push_back(static_cast<int>(n));
 
   //
   // Return
   //
   return List::create(
     Named("changepoints") = changepoints,
-    Named("lastIndexSet") = NULL,
-    Named("nb")           = NULL,
+    Named("lastIndexSet") = R_NilValue,
+    Named("nb")           = R_NilValue,
     Named("costQ")        = std::vector<double>(Q.begin() + 1, Q.end()));
 }
-

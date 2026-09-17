@@ -1,0 +1,11 @@
+"dataset","method","exponent","n_min","n_max","median_time_at_n_max"
+"historical Experiment 1 CSV","PELT",1.92893571866634,1024,16384,0.239500000000006
+"historical Experiment 1 CSV","SVP historical",1.19248463365349,1024,16384,0.0739999999999839
+"checked-in paper timing CSV","PELT",1.3731940900434,256,16384,0.209499999999991
+"checked-in paper timing CSV","SVP historical curve A",0.813691533924896,256,16384,0.0214999999999961
+"checked-in paper timing CSV","SVP historical curve B",0.819506515809239,256,16384,0.0219999999999914
+"checked-in paper timing CSV","SVP historical curve C",-0.00276358074402549,256,16384,0.00199999999999534
+"refreshed controlled benchmark","PELT",1.66451210677669,256,16384,0.20599999999996
+"refreshed controlled benchmark","SVP Gaussian / both / c = 1.987",2.09030706240807,256,16384,6.06650000000002
+"refreshed controlled benchmark","SVP Gaussian / none / c = 0.968",1.915090837925,256,16384,0.167500000000018
+"refreshed controlled benchmark","SVP Gaussian / right / c = 1.642",0.840263133891748,256,16384,0.00203101503759324

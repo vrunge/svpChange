@@ -9,21 +9,45 @@ SN(data, Kmax)
 \arguments{
 \item{data}{A numeric vector representing the data to segment.}
 
-\item{Kmax}{An integer value representing the maximal number of segment}
+\item{Kmax}{Maximum number of segments. It should be an integer between 1
+and \code{length(data)}.}
 }
 \value{
-A list with the following elements:
-\itemize{
-  \item \code{changepoints}: the last index of each segment for each number of segment K between 1 and Kmax
-  \item \code{nb}: NULL
-  \item \code{lastIndexSet}: NULL
-  \item \code{costQ}: a matrix saving the optimal cost at each time step for each number of segments (in k-th column for k segments)
+A list with the following components:
+\describe{
+\item{changepoints}{List of length \code{Kmax}. Element \code{k} contains the \code{k}
+increasing, one-based, inclusive segment endpoints of the optimal
+\code{k}-segment partition, including \code{length(data)}.}
+\item{lastIndexSet}{Always \code{NULL}; SN does not prune candidates.}
+\item{nb}{Always \code{NULL}; SN does not prune candidates.}
+\item{costQ}{Numeric matrix with \code{length(data) + 1} rows and \code{Kmax}
+columns. Entry \verb{[t + 1, k]} is the minimum cost for \code{data[1:t]} with
+exactly \code{k} segments; infeasible entries are \code{Inf}.}
 }
 }
 \description{
-This function implements the SN algorithm of a given vector `data` with a given maximum number of changes
-It finds the optimal segmentation for all K between 1 and Kmax that minimizes the global cost using dynamic programming.
+Finds the least-squares segmentation for every fixed number of
+segments from 1 through \code{Kmax}, using dynamic programming.
 }
 \details{
 Segment Neighborhood
+
+A candidate boundary \code{s} and endpoint \code{t} represent the R segment
+\code{data[(s + 1):t]}. The segment cost is its sum of squared errors around its
+sample mean.
+}
+\examples{
+set.seed(1)
+data <- ts_generator(
+  chpts = c(20, 40), parameters = c(0, 4),
+  sd_noise = 0.5, type = "gauss"
+)
+fit <- SN(data, Kmax = 2)
+fit$changepoints[[2]]
+fit$costQ[nrow(fit$costQ), ]
+
+}
+\seealso{
+\code{\link[=OP]{OP()}} and \code{\link[=PELT]{PELT()}} for penalized segmentation, and \code{\link[=SVP]{SVP()}} for
+validity-constrained partitioning.
 }

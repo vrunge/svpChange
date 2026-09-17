@@ -4,19 +4,36 @@
 \alias{valid_RANGE_SLACK}
 \title{Validity Test Based on Trimmed Range}
 \usage{
-valid_RANGE_SLACK(y, gamma)
+valid_RANGE_SLACK(y, gamma, trim = 3)
 }
 \arguments{
-\item{y}{A numeric vector representing a segment of the signal.}
+\item{y}{A numeric vector representing a segment with at least
+\code{2 * trim + 1} observations.}
 
 \item{gamma}{A numeric threshold for the trimmed range.}
+
+\item{trim}{Number of observations to remove from each end. Defaults to 3
+and must be a non-negative integer.}
 }
 \value{
-TRUE if the trimmed range is less than or equal to gamma, or if the segment is too short.
+TRUE if the trimmed range is less than or equal to gamma.
 }
 \description{
-Applies a slack range test using trimmed minimum and maximum (ignores smallest and largest 3 values).
+Applies a slack range test using trimmed minimum and maximum
+(ignores \code{trim} observations at each end).
 }
 \details{
 Validity Test Based on Trimmed Range
+
+The test discards \code{trim} smallest and \code{trim} largest observations
+before computing the range. At least \code{2 * trim + 1}
+observations are therefore required, leaving one observation after
+trimming. The minimum segment length is enforced by the caller.
+}
+\examples{
+set.seed(1)
+data <- ts_generator(
+  chpts = 30, parameters = 0, sd_noise = 1, type = "gauss"
+)
+valid_RANGE_SLACK(data, gamma = 4, trim = 3)
 }

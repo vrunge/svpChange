@@ -47,60 +47,89 @@ BEGIN_RCPP
     return rcpp_result_gen;
 END_RCPP
 }
+// AR1_rho
+double AR1_rho(std::vector<double> data);
+RcppExport SEXP _svpChange_AR1_rho(SEXP dataSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< std::vector<double> >::type data(dataSEXP);
+    rcpp_result_gen = Rcpp::wrap(AR1_rho(data));
+    return rcpp_result_gen;
+END_RCPP
+}
+// AR1_single_change
+List AR1_single_change(std::vector<double> data, double gamma, double rho, double sigma2, bool profile_sigma);
+RcppExport SEXP _svpChange_AR1_single_change(SEXP dataSEXP, SEXP gammaSEXP, SEXP rhoSEXP, SEXP sigma2SEXP, SEXP profile_sigmaSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< std::vector<double> >::type data(dataSEXP);
+    Rcpp::traits::input_parameter< double >::type gamma(gammaSEXP);
+    Rcpp::traits::input_parameter< double >::type rho(rhoSEXP);
+    Rcpp::traits::input_parameter< double >::type sigma2(sigma2SEXP);
+    Rcpp::traits::input_parameter< bool >::type profile_sigma(profile_sigmaSEXP);
+    rcpp_result_gen = Rcpp::wrap(AR1_single_change(data, gamma, rho, sigma2, profile_sigma));
+    return rcpp_result_gen;
+END_RCPP
+}
+// focus_valid_cpp
+bool focus_valid_cpp(std::vector<double> data, double gamma, bool check_all_prefixes);
+RcppExport SEXP _svpChange_focus_valid_cpp(SEXP dataSEXP, SEXP gammaSEXP, SEXP check_all_prefixesSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< std::vector<double> >::type data(dataSEXP);
+    Rcpp::traits::input_parameter< double >::type gamma(gammaSEXP);
+    Rcpp::traits::input_parameter< bool >::type check_all_prefixes(check_all_prefixesSEXP);
+    rcpp_result_gen = Rcpp::wrap(focus_valid_cpp(data, gamma, check_all_prefixes));
+    return rcpp_result_gen;
+END_RCPP
+}
 // SVP
-List SVP(std::vector<double> data, double gamma, std::string test, bool prune_if_unvalid);
-RcppExport SEXP _svpChange_SVP(SEXP dataSEXP, SEXP gammaSEXP, SEXP testSEXP, SEXP prune_if_unvalidSEXP) {
+List SVP(std::vector<double> data, double gamma, std::string test, std::string subtests, double sigma2, double rho, bool profile_sigma, double quantile, std::string cost);
+RcppExport SEXP _svpChange_SVP(SEXP dataSEXP, SEXP gammaSEXP, SEXP testSEXP, SEXP subtestsSEXP, SEXP sigma2SEXP, SEXP rhoSEXP, SEXP profile_sigmaSEXP, SEXP quantileSEXP, SEXP costSEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
     Rcpp::RNGScope rcpp_rngScope_gen;
     Rcpp::traits::input_parameter< std::vector<double> >::type data(dataSEXP);
     Rcpp::traits::input_parameter< double >::type gamma(gammaSEXP);
     Rcpp::traits::input_parameter< std::string >::type test(testSEXP);
-    Rcpp::traits::input_parameter< bool >::type prune_if_unvalid(prune_if_unvalidSEXP);
-    rcpp_result_gen = Rcpp::wrap(SVP(data, gamma, test, prune_if_unvalid));
+    Rcpp::traits::input_parameter< std::string >::type subtests(subtestsSEXP);
+    Rcpp::traits::input_parameter< double >::type sigma2(sigma2SEXP);
+    Rcpp::traits::input_parameter< double >::type rho(rhoSEXP);
+    Rcpp::traits::input_parameter< bool >::type profile_sigma(profile_sigmaSEXP);
+    Rcpp::traits::input_parameter< double >::type quantile(quantileSEXP);
+    Rcpp::traits::input_parameter< std::string >::type cost(costSEXP);
+    rcpp_result_gen = Rcpp::wrap(SVP(data, gamma, test, subtests, sigma2, rho, profile_sigma, quantile, cost));
     return rcpp_result_gen;
 END_RCPP
 }
 // svp0
-List svp0(std::vector<double> data, double gamma, Function test, bool prune_if_unvalid, bool prune_if_PELT);
-RcppExport SEXP _svpChange_svp0(SEXP dataSEXP, SEXP gammaSEXP, SEXP testSEXP, SEXP prune_if_unvalidSEXP, SEXP prune_if_PELTSEXP) {
+List svp0(std::vector<double> data, double gamma, Function test, std::string subtests, bool PELT_pruning);
+RcppExport SEXP _svpChange_svp0(SEXP dataSEXP, SEXP gammaSEXP, SEXP testSEXP, SEXP subtestsSEXP, SEXP PELT_pruningSEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
     Rcpp::RNGScope rcpp_rngScope_gen;
     Rcpp::traits::input_parameter< std::vector<double> >::type data(dataSEXP);
     Rcpp::traits::input_parameter< double >::type gamma(gammaSEXP);
     Rcpp::traits::input_parameter< Function >::type test(testSEXP);
-    Rcpp::traits::input_parameter< bool >::type prune_if_unvalid(prune_if_unvalidSEXP);
-    Rcpp::traits::input_parameter< bool >::type prune_if_PELT(prune_if_PELTSEXP);
-    rcpp_result_gen = Rcpp::wrap(svp0(data, gamma, test, prune_if_unvalid, prune_if_PELT));
+    Rcpp::traits::input_parameter< std::string >::type subtests(subtestsSEXP);
+    Rcpp::traits::input_parameter< bool >::type PELT_pruning(PELT_pruningSEXP);
+    rcpp_result_gen = Rcpp::wrap(svp0(data, gamma, test, subtests, PELT_pruning));
     return rcpp_result_gen;
 END_RCPP
 }
-// SVP_costTests
-List SVP_costTests(std::vector<double> data, double gamma, std::string test, double quantile);
-RcppExport SEXP _svpChange_SVP_costTests(SEXP dataSEXP, SEXP gammaSEXP, SEXP testSEXP, SEXP quantileSEXP) {
+// svp_smuce_cpp
+IntegerVector svp_smuce_cpp(NumericVector y, double q, double sigma2);
+RcppExport SEXP _svpChange_svp_smuce_cpp(SEXP ySEXP, SEXP qSEXP, SEXP sigma2SEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
     Rcpp::RNGScope rcpp_rngScope_gen;
-    Rcpp::traits::input_parameter< std::vector<double> >::type data(dataSEXP);
-    Rcpp::traits::input_parameter< double >::type gamma(gammaSEXP);
-    Rcpp::traits::input_parameter< std::string >::type test(testSEXP);
-    Rcpp::traits::input_parameter< double >::type quantile(quantileSEXP);
-    rcpp_result_gen = Rcpp::wrap(SVP_costTests(data, gamma, test, quantile));
-    return rcpp_result_gen;
-END_RCPP
-}
-// SVP_old
-List SVP_old(std::vector<double> data, double gamma, std::string test, bool prune_if_unvalid);
-RcppExport SEXP _svpChange_SVP_old(SEXP dataSEXP, SEXP gammaSEXP, SEXP testSEXP, SEXP prune_if_unvalidSEXP) {
-BEGIN_RCPP
-    Rcpp::RObject rcpp_result_gen;
-    Rcpp::RNGScope rcpp_rngScope_gen;
-    Rcpp::traits::input_parameter< std::vector<double> >::type data(dataSEXP);
-    Rcpp::traits::input_parameter< double >::type gamma(gammaSEXP);
-    Rcpp::traits::input_parameter< std::string >::type test(testSEXP);
-    Rcpp::traits::input_parameter< bool >::type prune_if_unvalid(prune_if_unvalidSEXP);
-    rcpp_result_gen = Rcpp::wrap(SVP_old(data, gamma, test, prune_if_unvalid));
+    Rcpp::traits::input_parameter< NumericVector >::type y(ySEXP);
+    Rcpp::traits::input_parameter< double >::type q(qSEXP);
+    Rcpp::traits::input_parameter< double >::type sigma2(sigma2SEXP);
+    rcpp_result_gen = Rcpp::wrap(svp_smuce_cpp(y, q, sigma2));
     return rcpp_result_gen;
 END_RCPP
 }
@@ -109,10 +138,12 @@ static const R_CallMethodDef CallEntries[] = {
     {"_svpChange_OP", (DL_FUNC) &_svpChange_OP, 2},
     {"_svpChange_PELT", (DL_FUNC) &_svpChange_PELT, 2},
     {"_svpChange_SN", (DL_FUNC) &_svpChange_SN, 2},
-    {"_svpChange_SVP", (DL_FUNC) &_svpChange_SVP, 4},
+    {"_svpChange_AR1_rho", (DL_FUNC) &_svpChange_AR1_rho, 1},
+    {"_svpChange_AR1_single_change", (DL_FUNC) &_svpChange_AR1_single_change, 5},
+    {"_svpChange_focus_valid_cpp", (DL_FUNC) &_svpChange_focus_valid_cpp, 3},
+    {"_svpChange_SVP", (DL_FUNC) &_svpChange_SVP, 9},
     {"_svpChange_svp0", (DL_FUNC) &_svpChange_svp0, 5},
-    {"_svpChange_SVP_costTests", (DL_FUNC) &_svpChange_SVP_costTests, 4},
-    {"_svpChange_SVP_old", (DL_FUNC) &_svpChange_SVP_old, 4},
+    {"_svpChange_svp_smuce_cpp", (DL_FUNC) &_svpChange_svp_smuce_cpp, 3},
     {NULL, NULL, 0}
 };
 

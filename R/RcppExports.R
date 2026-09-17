@@ -4,21 +4,40 @@
 #' Optimal Partitioning Algorithm
 #'
 #' @title Optimal Partitioning Algorithm
-#' @description This function implements the OP algorithm of a given vector `data` with a given penalty term.
-#' It finds the optimal change points that minimize a penalized cost using dynamic programming.
+#' @description Finds the least-squares segmentation minimizing the sum of
+#' within-segment squared errors plus `penalty` times the number of estimated
+#' change points.
 #'
 #' @param data A numeric vector representing the data to segment.
-#' @param penalty A double value representing the penalty term for adding a new segment.
+#' @param penalty Numeric penalty applied to each estimated change point.
 #'
-#' @return A list with (1) the `\code{changepoints}` elements, (2) a vector `\code{nb}` saving the number of non-pruned elements at each iteration, (3) a vector `\code{lastIndexSet}` containing the non-pruned indices at the end of the algo and (4) a vector `\code{costQ}` saving the optimal cost at each time step. The elements `\code{nb}` and `\code{lastIndexSet}` are set to NULL. They are included for consistency with other algorithms that prune the number of indices to be tracked over time.
+#' @details A candidate boundary `s` and endpoint `t` represent the R segment
+#' `data[(s + 1):t]`. Setting the initial cost to `-penalty` makes the total
+#' penalty equal to `penalty * (K - 1)` for a partition with `K` segments.
+#'
+#' @return A list with the following components:
+#' \describe{
+#'   \item{changepoints}{Increasing, one-based, inclusive segment endpoints,
+#'     including `length(data)`.}
+#'   \item{lastIndexSet}{Always `NULL`; OP does not prune candidates.}
+#'   \item{nb}{Always `NULL`; OP does not prune candidates.}
+#'   \item{costQ}{Numeric vector of length `length(data)`. Element `t` is the
+#'     minimum penalized cost for `data[1:t]`.}
+#' }
 #'
 #' @examples
-#' n <- 1000
-#' data <- rep(c(0, 1, -0.5, 0), each = n) + rnorm(4 * n)
+#' set.seed(1)
+#' data <- ts_generator(
+#'   chpts = c(40, 80, 120), parameters = c(0, 2, -1),
+#'   sd_noise = 1, type = "gauss"
+#' )
 #' penalty <- 2 * log(length(data))
 #' OPres <- OP(data, penalty)
 #' OPres$changepoints
 #'
+#' @seealso [PELT()] for the pruned version of the same objective, [SN()] for
+#'   fixed numbers of segments, and [SVP()] for validity-constrained
+#'   partitioning.
 #' @export
 OP <- function(data, penalty) {
     .Call(`_svpChange_OP`, data, penalty)
@@ -28,25 +47,41 @@ OP <- function(data, penalty) {
 #'
 #' @title Optimal Partitioning using PELT
 #'
-#' @description This function implements the OP algorithm using PELT of a given vector `data` with a given penalty term.
-#' It finds the optimal change points that minimize the cost function using dynamic programming.
+#' @description Finds the same penalized least-squares segmentation as
+#' [OP()], while using the PELT rule to prune candidate boundaries.
 #'
 #' @param data A numeric vector representing the data to segment.
-#' @param penalty A double value representing the penalty term for adding a new segment.
+#' @param penalty Numeric penalty applied to each estimated change point.
 #'
-#' @return A list with the following elements:
-#' \itemize{
-#'   \item \code{changepoints}: the last index of each segment,
-#'   \item \code{nb}: a vector saving the number of non-pruned elements at each iteration,
-#'   \item \code{lastIndexSet}: a vector containing the non-pruned indices at the end of the algorithm,
-#'   \item \code{costQ}: a vector saving the optimal cost at each time step.
+#' @details A candidate boundary `s` and endpoint `t` represent the R segment
+#' `data[(s + 1):t]`. Setting the initial cost to `-penalty` makes the total
+#' penalty equal to `penalty * (K - 1)` for a partition with `K` segments.
+#' The pruning changes the candidate set, not the optimized objective.
+#'
+#' @return A list with the following components:
+#' \describe{
+#'   \item{changepoints}{Increasing, one-based, inclusive segment endpoints,
+#'     including `length(data)`.}
+#'   \item{lastIndexSet}{Zero-based candidate boundaries remaining after the
+#'     final iteration, returned in decreasing order and including
+#'     `length(data)`.}
+#'   \item{nb}{Numeric vector in time order. Element `t` is the number of
+#'     candidates examined at endpoint `t`, before pruning.}
+#'   \item{costQ}{Numeric vector of length `length(data)`. Element `t` is the
+#'     minimum penalized cost for `data[1:t]`.}
 #' }
 #' @examples
-#' n <- 1000
-#' data <- rep(c(0, 1, -0.5, 0), each = n) + rnorm(4 * n)
+#' set.seed(1)
+#' data <- ts_generator(
+#'   chpts = c(40, 80, 120), parameters = c(0, 2, -1),
+#'   sd_noise = 1, type = "gauss"
+#' )
 #' penalty <- 2 * log(length(data))
 #' resPELT <- PELT(data, penalty)
 #'
+#' @seealso [OP()] for the unpruned version of the same objective, [SN()] for
+#'   fixed numbers of segments, and [SVP()] for validity-constrained
+#'   partitioning.
 #' @export
 PELT <- function(data, penalty) {
     .Call(`_svpChange_PELT`, data, penalty)
@@ -56,101 +91,411 @@ PELT <- function(data, penalty) {
 #'
 #' @title Segment Neighborhood
 #'
-#' @description This function implements the SN algorithm of a given vector `data` with a given maximum number of changes
-#' It finds the optimal segmentation for all K between 1 and Kmax that minimizes the global cost using dynamic programming.
+#' @description Finds the least-squares segmentation for every fixed number of
+#' segments from 1 through `Kmax`, using dynamic programming.
 #'
 #' @param data A numeric vector representing the data to segment.
-#' @param Kmax An integer value representing the maximal number of segment
+#' @param Kmax Maximum number of segments. It should be an integer between 1
+#'   and `length(data)`.
 #'
-#' @return A list with the following elements:
-#' \itemize{
-#'   \item \code{changepoints}: the last index of each segment for each number of segment K between 1 and Kmax
-#'   \item \code{nb}: NULL
-#'   \item \code{lastIndexSet}: NULL
-#'   \item \code{costQ}: a matrix saving the optimal cost at each time step for each number of segments (in k-th column for k segments)
+#' @details A candidate boundary `s` and endpoint `t` represent the R segment
+#' `data[(s + 1):t]`. The segment cost is its sum of squared errors around its
+#' sample mean.
+#'
+#' @return A list with the following components:
+#' \describe{
+#'   \item{changepoints}{List of length `Kmax`. Element `k` contains the `k`
+#'     increasing, one-based, inclusive segment endpoints of the optimal
+#'     `k`-segment partition, including `length(data)`.}
+#'   \item{lastIndexSet}{Always `NULL`; SN does not prune candidates.}
+#'   \item{nb}{Always `NULL`; SN does not prune candidates.}
+#'   \item{costQ}{Numeric matrix with `length(data) + 1` rows and `Kmax`
+#'     columns. Entry `[t + 1, k]` is the minimum cost for `data[1:t]` with
+#'     exactly `k` segments; infeasible entries are `Inf`.}
 #' }
 #'
+#' @examples
+#' set.seed(1)
+#' data <- ts_generator(
+#'   chpts = c(20, 40), parameters = c(0, 4),
+#'   sd_noise = 0.5, type = "gauss"
+#' )
+#' fit <- SN(data, Kmax = 2)
+#' fit$changepoints[[2]]
+#' fit$costQ[nrow(fit$costQ), ]
+#'
+#' @seealso [OP()] and [PELT()] for penalized segmentation, and [SVP()] for
+#'   validity-constrained partitioning.
 #' @export
 SN <- function(data, Kmax) {
     .Call(`_svpChange_SN`, data, Kmax)
 }
 
-SVP <- function(data, gamma, test, prune_if_unvalid = TRUE) {
-    .Call(`_svpChange_SVP`, data, gamma, test, prune_if_unvalid)
+AR1_rho <- function(data) {
+    .Call(`_svpChange_AR1_rho`, data)
 }
 
-#' Smallest Valid Partitioning with Validation and Pruning using Rcpp
+AR1_single_change <- function(data, gamma, rho = NA_real_, sigma2 = 1.0, profile_sigma = FALSE) {
+    .Call(`_svpChange_AR1_single_change`, data, gamma, rho, sigma2, profile_sigma)
+}
+
+.focus_valid_cpp <- function(data, gamma, check_all_prefixes = TRUE) {
+    .Call(`_svpChange_focus_valid_cpp`, data, gamma, check_all_prefixes)
+}
+
+#' Smallest Valid Partitioning with Incremental Validity Tests
 #'
-#' @title Smallest Valid Partitioning with Validation and Pruning
-#' @description This function implements a dynamic programming approach to segment a univariate signal into the smallest number of valid segments, according to a user-defined validation function. Each segment must pass a validity test (e.g., based on variance, range, etc.). The algorithm minimizes a quadratic cost subject to this constraint.
+#' Segments a univariate series into the smallest number of segments that pass
+#' a selected validity test. Among partitions with the same number of segments,
+#' the function chooses the one with the smallest within-segment cost, selected
+#' with `cost`. The validity statistics are maintained incrementally in C++, so
+#' this interface is considerably faster than supplying an R validity function
+#' to [svp0()].
 #'
-#' @param data A numeric vector representing the univariate signal to be segmented.
-#' @param gamma A numeric value used as a threshold in the validation function and as a penalty for each segment.
-#' @param test A function of the form `function(data, gamma)` returning TRUE if the segment is valid. Default is `valid_OP`.
-#' @param prune_if_unvalid Logical. If TRUE (default), the algorithm applies *segment-wise validation*:
-#' at each time step, it tests whether the candidate segment \code{data[(s+1):t]} is valid using the
-#' user-defined function \code{test}. If the segment fails the test, the candidate \code{s} is removed
-#' (pruned) from the set of possible changepoints. This accelerates computation by avoiding invalid
-#' segment extensions. If FALSE, the algorithm skips this validation and considers all candidate
-#' segments without checking their validity (which can be faster but may return invalid segments).
-#' @param prune_if_PELT Logical.
+#' A candidate segment is evaluated only at its current endpoint. The
+#' incremental state still receives every intervening observation, but a
+#' previously evaluated endpoint is not tested again. Whether an invalid
+#' endpoint can be reconsidered later depends on `subtests`: with
+#' `subtests = "none"`, the candidate is retained and can recover; with
+#' `subtests = "right"` or `subtests = "both"`, it is removed immediately.
+#' With `subtests = "both"`, an invalid boundary also removes that boundary
+#' and every older boundary under the inclusive left-pruning rule. The
+#' available values of `test` are:
 #'
-#' @return A list with the following components :
+#' * `"gaussian_mean"`: Gaussian FOCUS likelihood-ratio test for a change in
+#'   mean. Use this for independent Gaussian observations with constant
+#'   variance.
+#' * `"gamma_rate"`: likelihood-ratio test for a change in the rate of
+#'   positive Gamma observations (unit shape in the current implementation).
+#' * `"gaussian_variance"`: Gamma-rate test applied to squared observations,
+#'   for changes in Gaussian variance around a known zero mean.
+#' * `"AR1"`: conditional fixed-`rho` Gaussian likelihood-ratio scan for a
+#'   change in the marginal mean of an AR(1) series, conditional on the first
+#'   observation. In the AR(1) model, an innovation is
+#'   the new random shock after accounting for the previous observation and the
+#'   AR(1) mean structure; `sigma2` is the variance of this shock, not the
+#'   marginal variance of the observations.
+#' * `"AR1Profile"`: the same conditional AR(1) scan, but profiling out the
+#'   innovation variance. The variance is estimated separately under the no-change and
+#'   change models from their residual sums of squares, which is useful when
+#'   the innovation scale is unknown.
+#' * `"AR1Focus"`: faster approximate AR(1) test that applies Gaussian FOCUS
+#'   to the innovations `x[t] - rho * x[t - 1]`. The exact `"AR1"` test is the
+#'   preferred choice when boundary accuracy matters.
+#' * `"quantile"`: approximate quantile-range test using two streaming
+#'   P-squared quantile estimators.
+#' * `"quantileExact"`: exact empirical quantile-range test using an
+#'   order-statistics tree.
+#' * `"varCost"`: online within-segment variance statistic.
+#' * `"WilcoxonCost"`: maximum Wilcoxon statistic over possible splits.
+#' * `"MedianMoodCost"`: maximum Median-Mood statistic over possible splits.
+#'
+#' ## Per-candidate update complexity
+#'
+#' Let `m` be the current length of one candidate segment and let `a_m` be
+#' the number of active functional-pruning pieces, where `a_m <= m`. The
+#' state-update column is the cost of incorporating one new observation.
+#' The endpoint-check column includes the work needed to decide validity.
+#' These are per-candidate costs; total SVP time also depends on how many
+#' candidates are examined under the selected `subtests` mode.
+#'
+#' | Test | State update | Update and endpoint validity check |
+#' |---|---:|---:|
+#' | `"gaussian_mean"` | amortized `O(1)`, worst `O(m)` | expected `O(log m)`, worst `O(m)` |
+#' | `"gamma_rate"` | `O(a_m)`, worst `O(m)` | `O(a_m)`, worst `O(m)` |
+#' | `"gaussian_variance"` | `O(a_m)`, worst `O(m)` | `O(a_m)`, worst `O(m)` |
+#' | `"AR1"` | `O(1)` | `O(m)` |
+#' | `"AR1Profile"` | `O(1)` | `O(m)` |
+#' | `"AR1Focus"` | `O(a_m)`, worst `O(m)` | `O(a_m)`, worst `O(m)` |
+#' | `"quantile"` | `O(1)` | `O(1)` |
+#' | `"quantileExact"` | expected `O(log m)`, worst `O(m)` | expected `O(log m)`, worst `O(m)` |
+#' | `"varCost"` | `O(1)` | `O(1)` |
+#' | `"WilcoxonCost"` | `O(m)` | `O(m)` |
+#' | `"MedianMoodCost"` | expected `O(log m)`, worst `O(m)` | `O(m)` |
+#'
+#' For the Gaussian FOCuS test, the standard FOCuS result gives
+#' `E[a_m] = O(log m)` under independent continuous noise with a constant or
+#' single-change mean, so its complete endpoint update is expected
+#' `O(log m)` and worst-case `O(m)`. The recurrence itself is amortized
+#' `O(1)`; the logarithmic term comes from maximizing over the active pieces.
+#' The Gamma, Gaussian-variance, and AR1Focus implementations use the same
+#' active-piece strategy and cost `O(a_m)`, but this package does not claim the
+#' Gaussian theorem for those different data models without additional
+#' model-specific assumptions.
+#'
+#' Thus, `"quantile"` and `"varCost"` have genuinely constant-time complete
+#' endpoint updates. `"quantileExact"` has an expected logarithmic update.
+#' Functional-pruning tests can be fast when `a_m` remains small, but their
+#' worst-case endpoint cost is linear.
+#'
+#' For an AR(1) series generated by `ts_generator(type = "gaussAR1")`, the
+#' model is `x[t] = mu[t] + e[t]`, with
+#' `e[t] = rho * e[t - 1] + eta[t]` and
+#' `eta[t] ~ N(0, sigma2)`. Thus, `rho` controls serial dependence and
+#' `sigma2` is the innovation variance, that is, the variance of the new shock
+#' after accounting for the previous observation. It is not the marginal
+#' variance of the observed series; for a stationary AR(1) noise process, the
+#' marginal variance is `sigma2 / (1 - rho^2)`. In `ts_generator()`,
+#' `sd_noise` is the innovation standard deviation, so use
+#' `sigma2 = sd_noise^2`.
+#'
+#' `"AR1"` treats `rho` and `sigma2` as fixed and uses the conditional
+#' Gaussian likelihood scan given the first observation. `"AR1Profile"` uses
+#' the same conditional scan but estimates the innovation variance separately
+#' under the no-change and
+#' change models. This is useful when the innovation scale is unknown.
+#' `"AR1Focus"` is faster because it applies the Gaussian FOCUS calculation
+#' to the transformed innovations; it is an approximation and can produce
+#' different boundaries near a change point.
+#'
+#' ## Within-segment cost
+#'
+#' The validity test fixes the number of segments; `cost` decides between the
+#' partitions that attain it, so it controls where the boundaries are placed
+#' and not how many there are. Two cost series are available:
+#'
+#' * `"gaussian"`: the sum of squared deviations of `data[(s + 1):t]` from the
+#'   segment mean. This is the right choice for independent observations.
+#' * `"ar1"`: the same quantity for the innovations
+#'   `z[u] = data[u] - rho * data[u - 1]`. Inside a segment with constant mean
+#'   `mu` these have constant mean `(1 - rho) * mu`, so their sum of squared
+#'   deviations is the profiled conditional cost of the AR(1) mean model. The
+#'   innovation `z[s + 1]` that straddles the boundary is skipped, because its
+#'   mean is `mu_new - rho * mu_old` rather than `(1 - rho) * mu_new`; keeping
+#'   it would charge every segment for the jump in front of it and pull the
+#'   boundary away from the change. Costs are only ever compared across
+#'   partitions with the same number of segments `K`, and every such partition
+#'   skips exactly `K - 1` innovations, so the comparison remains fair.
+#'
+#' `"auto"`, the default, uses `"ar1"` for `"AR1"`, `"AR1Profile"`, and
+#' `"AR1Focus"`, and `"gaussian"` for every other test. Under serial
+#' dependence the Gaussian cost is misspecified, so an AR(1) test combined
+#' with the Gaussian cost detects the right number of changes but places them
+#' less accurately. Selecting `"ar1"` with a non-AR(1) test is allowed and
+#' uses `rho` in the same way.
+#'
+#' The "subtests" argument selects the validity-based candidate-pruning rules.
+#' "right" removes a candidate boundary when its current segment endpoint is
+#' invalid; "both" additionally removes that boundary and every older
+#' boundary; and "none" retains all candidates. In "right", a valid
+#' one-segment candidate is already optimal, so later candidates are deferred
+#' until that candidate fails. If the shortcut ends, deferred candidates are
+#' replayed through the missed endpoints so that the right-pruning history is
+#' preserved; after that, they are tested only at the current endpoint. In
+#' "both", candidates are examined from newest to oldest and the scan stops
+#' at the first invalid boundary, since the inclusive left rule removes it and
+#' all older candidates. In "none", candidates are grouped by their preceding
+#' segment count and only the first group containing a valid candidate is
+#' needed. Invalid candidates are never used in the current optimum.
+#' Pruning is exact only when the selected validity test has the corresponding
+#' monotonicity properties. For an arbitrary user-defined rule, use
+#' "none" unless those properties have been established.
+#'
+#' @param data Numeric vector containing the univariate series. Missing or
+#'   non-finite values are not supported.
+#' @param gamma Positive finite scalar validity threshold. A larger value
+#'   generally accepts longer or less homogeneous segments.
+#' @param test Character scalar selecting one of the validity tests listed in
+#'   Details. Defaults to `"gaussian_mean"`.
+#' @param subtests Character scalar selecting the validity-pruning rules:
+#'   "both" (default), "right", or "none".
+#' @param sigma2 Positive finite innovation variance for fixed-variance AR1
+#'   tests (`"AR1"` with `profile_sigma = FALSE`, and `"AR1Focus"`).
+#'   It is the conditional/error variance of the new AR(1) shock, not the
+#'   marginal variance of the observed series. It is used when the variance is
+#'   fixed. It is ignored by `"AR1Profile"` and by `"AR1"` when
+#'   `profile_sigma = TRUE`.
+#' @param rho AR(1) coefficient for the three AR1 tests. It must be finite and
+#'   strictly between -1 and 1. If it is `NA`, the value is estimated robustly
+#'   from the full series using [AR1_rho()].
+#' @param profile_sigma Logical; if `TRUE`, estimate the innovation variance
+#'   separately under the no-change and one-change AR(1) models when
+#'   `test = "AR1"`. This removes the need to know the innovation scale and
+#'   uses the resulting residual sums of squares in the likelihood-ratio
+#'   statistic. Using `test = "AR1Profile"` has the same effect. The argument
+#'   is ignored by other tests.
+#' @param quantile Quantile level used by `"quantile"` and
+#'   `"quantileExact"`. It is ignored by other tests.
+#' @param cost Character scalar selecting the within-segment cost used to rank
+#'   partitions with the same number of segments: `"auto"` (default),
+#'   `"gaussian"`, or `"ar1"`. See Details. `"ar1"` uses `rho`, estimating it
+#'   from the full series with [AR1_rho()] when it is `NA`.
+#'
+#' @return A list with "changepoints" (the inclusive end of every segment,
+#'   including "length(data)"), "lastIndexSet" (zero-based candidate boundaries
+#'   remaining at termination, in decreasing order), "nb" (the number of
+#'   active candidates at the beginning of each endpoint iteration, before
+#'   pruning), "costQ" (always "NULL"), and "R". Row "t" of matrix "R"
+#'   stores the best cumulative cost on the scale selected by `cost`, the
+#'   number of segments, and the previous boundary for `data[1:t]`. The three
+#'   AR(1) tests also return "rho" and "sigma2".
+#'
+#' @examples
+#' # Gaussian mean: FOCuS test for independent Gaussian observations.
+#' set.seed(1)
+#' gaussian_data <- ts_generator(
+#'   chpts = c(20, 40, 60), parameters = c(0, 2, -1),
+#'   sd_noise = 1, type = "gauss"
+#' )
+#' SVP(gaussian_data, gamma = 2 * log(length(gaussian_data)),
+#'     test = "gaussian_mean")$changepoints
+#'
+#' # Gamma rate: positive exponential observations with changing rates.
+#' gamma_data <- ts_generator(
+#'   chpts = c(20, 40, 60), parameters = c(1, 4, 2),
+#'   type = "exp"
+#' )
+#' SVP(gamma_data, gamma = 2 * log(length(gamma_data)),
+#'     test = "gamma_rate")$changepoints
+#'
+#' # Gaussian variance: parameters are segment standard deviations.
+#' variance_data <- ts_generator(
+#'   chpts = c(20, 40, 60), parameters = c(0.5, 1.5, 0.75),
+#'   type = "variance"
+#' )
+#' SVP(variance_data, gamma = 2 * log(length(variance_data)),
+#'     test = "gaussian_variance")$changepoints
+#'
+#' # Quantile and exact quantile tests: robust tests for changes in spread.
+#' quantile_data <- ts_generator(
+#'   chpts = c(20, 40, 60), parameters = c(0.5, 1.5, 0.75),
+#'   type = "variance"
+#' )
+#' SVP(quantile_data, gamma = 2, quantile = 0.1,
+#'     test = "quantile")$changepoints
+#' SVP(quantile_data, gamma = 2, quantile = 0.1,
+#'     test = "quantileExact")$changepoints
+#'
+#' # Robust variance, Wilcoxon, and Median-Mood tests.
+#' robust_data <- ts_generator(
+#'   chpts = c(20, 40, 60), parameters = c(0, 2, -1),
+#'   sd_noise = 1, type = "gauss"
+#' )
+#' SVP(robust_data, gamma = 2, test = "varCost")$changepoints
+#' SVP(robust_data, gamma = 2 * log(length(robust_data)),
+#'     test = "WilcoxonCost")$changepoints
+#' SVP(robust_data, gamma = 2 * log(length(robust_data)),
+#'     test = "MedianMoodCost")$changepoints
+#'
+#' # Exact AR(1), with the known innovation variance.
+#' ar1_data <- ts_generator(
+#'   chpts = c(20, 40, 60), parameters = c(0, 2, -1),
+#'   sd_noise = 0.8, rho = 0.7, type = "gaussAR1"
+#' )
+#' SVP(ar1_data, gamma = 2 * log(length(ar1_data)), test = "AR1",
+#'     rho = 0.7, sigma2 = 0.8^2)$changepoints
+#'
+#' # Exact AR(1) with the innovation variance profiled out.
+#' SVP(ar1_data, gamma = 2 * log(length(ar1_data)),
+#'     test = "AR1Profile", rho = 0.7, sigma2 = 1)$changepoints
+#'
+#' # Faster approximate AR(1) FOCUS test on the transformed innovations.
+#' SVP(ar1_data, gamma = 2 * log(length(ar1_data)),
+#'     test = "AR1Focus", rho = 0.7, sigma2 = 0.8^2)$changepoints
+#'
+#' # The same test ranking partitions with the Gaussian cost instead, which
+#' # keeps the number of segments but can move the boundaries.
+#' SVP(ar1_data, gamma = 2 * log(length(ar1_data)),
+#'     test = "AR1Focus", rho = 0.7, sigma2 = 0.8^2,
+#'     cost = "gaussian")$changepoints
+#'
+#' @seealso [svp0()] for arbitrary R validity functions, [AR1_rho()], and
+#'   [AR1_single_change()].
+#' @export
+SVP <- function(data, gamma, test = "gaussian_mean", subtests = "both", sigma2 = 1.0, rho = NA_real_, profile_sigma = FALSE, quantile = 0.01, cost = "auto") {
+    .Call(`_svpChange_SVP`, data, gamma, test, subtests, sigma2, rho, profile_sigma, quantile, cost)
+}
+
+#' Smallest Valid Partitioning with a User-Defined Validity Test
+#'
+#' @title Smallest Valid Partitioning with a User-Defined Validity Test
+#' @description This function uses dynamic programming to find a partition of
+#' a univariate signal whose segments all pass a user-defined validity test.
+#' It first minimizes the number of segments and, among partitions with the
+#' same number of segments, minimizes the within-segment sum of squares.
+#'
+#' @param data Numeric vector containing the univariate signal to segment.
+#' @param gamma Numeric threshold passed to `test`.
+#' @param test Function of the form `function(segment, gamma)` returning one
+#'   non-missing logical value: `TRUE` if the segment is valid. The function
+#'   is not called for singleton segments; they are always valid.
+#' @param subtests Character scalar controlling validity-based pruning. The
+#'   choices are `"both"` (default), `"right"`, and `"none"`.
+#'   `"right"` removes a candidate start when its current segment is invalid;
+#'   `"both"` additionally removes that start and all older starts; and
+#'   `"none"` applies neither rule. Invalid candidates are never used for the
+#'   current optimum.
+#' @param PELT_pruning Logical; whether to apply the additional cost-based
+#'   candidate pruning rule.
+#'
+#' @details
+#' A candidate boundary `s` at endpoint `t` represents the R segment
+#' `data[(s + 1):t]`; `s` is zero-based and `t` is one-based. The quadratic
+#' cost is the residual sum of squares around the segment mean. Singleton
+#' segments are always valid, regardless of the result of `test`.
+#'
+#' @examples
+#' range_test <- function(segment, gamma) {
+#'   diff(range(segment)) <= gamma
+#' }
+#' set.seed(1)
+#' data <- ts_generator(
+#'   chpts = c(30, 60), parameters = c(0, 4),
+#'   sd_noise = 0.25, type = "gauss"
+#' )
+#' fit <- svp0(data, gamma = 2, test = range_test,
+#'            subtests = "both")
+#' fit$changepoints
+#'
+#' @return A list with the following components:
 #' \describe{
-#'   \item{changepoints}{Integer vector indicating the ending index of each segment (i.e., positions of changepoints).}
-#'   \item{nb}{Integer vector of length \code{length(data)}. At each position \code{t}, it records the number of candidates tested.}
-#'   \item{costQ}{Numeric vector of length \code{length(data)}. Quadratic cost value at each time step. Set to NULL as it is recorded into matrix R}
-#'   \item{R}{A matrix of dimension \code{(length(data)+1) x 3} containing, for each time step :
+#'   \item{changepoints}{Numeric vector of increasing segment-ending
+#'     positions, including `length(data)`. Internal values are estimated
+#'     change-point positions.}
+#'   \item{lastIndexSet}{Numeric vector of candidate boundaries remaining at
+#'     termination. These are zero-based boundaries and are returned in
+#'     decreasing order.}
+#'   \item{nb}{Numeric vector in time order. Element `t` is the number of
+#'     candidate entries examined at endpoint `t`, before pruning.}
+#'   \item{costQ}{Always `NULL`; cumulative costs are stored in the first
+#'     column of `R`.}
+#'   \item{R}{Numeric matrix with `length(data)` rows and three columns. Row
+#'     `t` describes the optimum ending at observation `t`:
 #'     \describe{
 #'       \item{Q}{cumulative cost}
 #'       \item{K}{number of segments in Q}
-#'       \item{s}{previous changepoint}
+#'       \item{s}{zero-based previous boundary; the final segment is
+#'         `data[(s + 1):t]`}
 #'     }
 #'   }
 #' }
 #'
 #' @export
-svp0 <- function(data, gamma, test, prune_if_unvalid = TRUE, prune_if_PELT = FALSE) {
-    .Call(`_svpChange_svp0`, data, gamma, test, prune_if_unvalid, prune_if_PELT)
+svp0 <- function(data, gamma, test, subtests = "both", PELT_pruning = FALSE) {
+    .Call(`_svpChange_svp0`, data, gamma, test, subtests, PELT_pruning)
 }
 
-SVP_costTests <- function(data, gamma, test, quantile = 0.01) {
-    .Call(`_svpChange_SVP_costTests`, data, gamma, test, quantile)
-}
-
-#' Smallest Valid Partitioning with FOCUS validity test
-#'
-#' @title Smallest Valid Partitioning with Validation and Pruning
-#' @description This function implements a dynamic programming approach to segment a univariate signal into the smallest number of valid segments, according to a user-defined validation function. Each segment must pass a validity test (e.g., based on variance, range, etc.). The algorithm minimizes a quadratic cost subject to this constraint.
-#'
-#' @param data A numeric vector representing the univariate signal to be segmented.
-#' @param gamma A numeric value used as a threshold in the validation function and as a penalty for each segment.
-#' @param test A function of the form `function(data, gamma)` returning TRUE if the segment is valid. Default is `valid_OP`.
-#' @param prune_if_unvalid Logical. If TRUE (default), the algorithm applies *segment-wise validation*:
-#' at each time step, it tests whether the candidate segment \code{data[(s+1):t]} is valid using the
-#' user-defined function \code{test}. If the segment fails the test, the candidate \code{s} is removed
-#' (pruned) from the set of possible changepoints. This accelerates computation by avoiding invalid
-#' segment extensions. If FALSE, the algorithm skips this validation and considers all candidate
-#' segments without checking their validity (which can be faster but may return invalid segments).
-#'
-#' @return A list with the following components :
-#' \describe{
-#'   \item{changepoints}{Integer vector indicating the ending index of each segment (i.e., positions of changepoints).}
-#'  \item{lastIndexSet}{Integer vector containing the non-pruned indices at the end of the algorithm execution}
-#'   \item{nb}{Integer vector of length \code{length(data)}. At each position \code{t}, it records the number of candidates tested.}
-#'   \item{costQ}{Numeric vector of length \code{length(data)}. Quadratic cost value at each time step. Set to NULL as it is recorded into matrix R}
-#'   \item{R}{A matrix of dimension \code{(length(data)+1) x 3} containing, for each time step :
-#'     \describe{
-#'       \item{Q}{cumulative cost}
-#'       \item{K}{number of segments in Q}
-#'       \item{s}{previous changepoint}
-#'     }
-#'   }
-#' }
-#'
-#'
-#' @export
-SVP_old <- function(data, gamma, test, prune_if_unvalid = TRUE) {
-    .Call(`_svpChange_SVP_old`, data, gamma, test, prune_if_unvalid)
+#' C++ SVP with SMUCE validity and constrained Gaussian cost
+#' @param y Numeric observations.
+#' @param q SMUCE threshold.
+#' @param sigma2 Known Gaussian variance.
+#' @return Integer segment-end indices.
+#' @details
+#' For independent Gaussian observations with known variance, this function
+#' returns the segment endpoints of one SMUCE-optimal partition. Internal
+#' endpoints are estimated changepoints.
+#' @references
+#' Frick, K., Munk, A., and Sieling, H. (2014). Multiscale Change-Point
+#' Inference. *Journal of the Royal Statistical Society: Series B*, 76(3),
+#' 495--580. doi:10.1111/rssb.12047.
+#' @examples
+#' set.seed(1)
+#' data <- ts_generator(
+#'   chpts = c(20, 40), parameters = c(0, 2),
+#'   sd_noise = 1, type = "gauss"
+#' )
+#' svp_smuce_cpp(data, q = 1.5, sigma2 = 1)
+svp_smuce_cpp <- function(y, q, sigma2 = 1.0) {
+    .Call(`_svpChange_svp_smuce_cpp`, y, q, sigma2)
 }
 

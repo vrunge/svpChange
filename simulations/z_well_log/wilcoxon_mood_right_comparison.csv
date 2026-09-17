@@ -1,0 +1,7 @@
+"method","n_changepoints","matched","precision","recall","F1","changepoints"
+"RFPOP benchmark
+biweight loss, lambda = 70, lthreshold = 2",10,10,1,1,1,"1070,1526,1685,1866,2047,2409,2469,2531,2591,2768"
+"Wilcoxon SVP / right
+K = 10, gamma = 3529.3",15,7,0.466666666666667,0.7,0.56,"374,660,970,1070,1404,1526,1685,1866,2056,2374,2591,2769,3082,3424,3777"
+"Median Mood SVP / right
+calibrated gamma = 84.85",8,7,0.875,0.7,0.777777777777778,"1070,1526,1685,1866,2046,2592,2768,3744"

@@ -1,0 +1,16 @@
+timestamp = 2026-09-17 06:55:57 UTC
+svpChange = 0.2.0
+robseg = 2019.7.2
+changepoint = 2.3
+R = R version 4.6.1 (2026-06-24)
+platform = aarch64-apple-darwin23
+git_sha = 5932b1ca9aae015297f072eed397d59d768b4609
+noise = Student-t(df = 2, scale = 1)
+n_grid = 256 to 8000 (16 values); fixed_n = 8000; k_grid = 0:40
+replicates = 64 for each method and experiment
+timer = proc.time elapsed; adaptive batching target 0.05 s; fixed method order
+simulation_elapsed_seconds = 53296.084
+selected_rfpop_c = 3
+selected_mood_alpha = 0.001
+selected_wilcoxon_c = 1.75
+SVP oracle_segments = simulated changes + 1

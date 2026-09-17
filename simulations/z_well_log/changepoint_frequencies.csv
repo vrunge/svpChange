@@ -1,0 +1,27 @@
+"mode","target","target_type","selection_frequency"
+"right",1070,"RFPOP reference",0.946
+"right",1526,"RFPOP reference",0.916
+"right",1685,"RFPOP reference",0.962
+"right",1866,"RFPOP reference",0.948
+"right",2047,"RFPOP reference",0.77
+"right",2409,"RFPOP reference",0
+"right",2429,"SVP only",0.002
+"right",2469,"RFPOP reference",0.006
+"right",2531,"RFPOP reference",0
+"right",2573,"SVP only",0.144
+"right",2591,"RFPOP reference",0.424
+"right",2768,"RFPOP reference",0.602
+"right",3744,"SVP only",0
+"both",1070,"RFPOP reference",0.956
+"both",1526,"RFPOP reference",0.934
+"both",1685,"RFPOP reference",0.982
+"both",1866,"RFPOP reference",0.954
+"both",2047,"RFPOP reference",0.954
+"both",2409,"RFPOP reference",0.038
+"both",2429,"SVP only",0.93
+"both",2469,"RFPOP reference",0.002
+"both",2531,"RFPOP reference",0
+"both",2573,"SVP only",0.908
+"both",2591,"RFPOP reference",0.116
+"both",2768,"RFPOP reference",0.876
+"both",3744,"SVP only",0

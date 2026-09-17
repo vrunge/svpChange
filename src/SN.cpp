@@ -5,25 +5,45 @@
 
 using namespace Rcpp;
 
-
 //' Segment Neighborhood
 //'
 //' @title Segment Neighborhood
 //'
-//' @description This function implements the SN algorithm of a given vector `data` with a given maximum number of changes
-//' It finds the optimal segmentation for all K between 1 and Kmax that minimizes the global cost using dynamic programming.
+//' @description Finds the least-squares segmentation for every fixed number of
+//' segments from 1 through `Kmax`, using dynamic programming.
 //'
 //' @param data A numeric vector representing the data to segment.
-//' @param Kmax An integer value representing the maximal number of segment
+//' @param Kmax Maximum number of segments. It should be an integer between 1
+//'   and `length(data)`.
 //'
-//' @return A list with the following elements:
-//' \itemize{
-//'   \item \code{changepoints}: the last index of each segment for each number of segment K between 1 and Kmax
-//'   \item \code{nb}: NULL
-//'   \item \code{lastIndexSet}: NULL
-//'   \item \code{costQ}: a matrix saving the optimal cost at each time step for each number of segments (in k-th column for k segments)
+//' @details A candidate boundary `s` and endpoint `t` represent the R segment
+//' `data[(s + 1):t]`. The segment cost is its sum of squared errors around its
+//' sample mean.
+//'
+//' @return A list with the following components:
+//' \describe{
+//'   \item{changepoints}{List of length `Kmax`. Element `k` contains the `k`
+//'     increasing, one-based, inclusive segment endpoints of the optimal
+//'     `k`-segment partition, including `length(data)`.}
+//'   \item{lastIndexSet}{Always `NULL`; SN does not prune candidates.}
+//'   \item{nb}{Always `NULL`; SN does not prune candidates.}
+//'   \item{costQ}{Numeric matrix with `length(data) + 1` rows and `Kmax`
+//'     columns. Entry `[t + 1, k]` is the minimum cost for `data[1:t]` with
+//'     exactly `k` segments; infeasible entries are `Inf`.}
 //' }
 //'
+//' @examples
+//' set.seed(1)
+//' data <- ts_generator(
+//'   chpts = c(20, 40), parameters = c(0, 4),
+//'   sd_noise = 0.5, type = "gauss"
+//' )
+//' fit <- SN(data, Kmax = 2)
+//' fit$changepoints[[2]]
+//' fit$costQ[nrow(fit$costQ), ]
+//'
+//' @seealso [OP()] and [PELT()] for penalized segmentation, and [SVP()] for
+//'   validity-constrained partitioning.
 //' @export
 // [[Rcpp::export]]
 List SN(std::vector<double> data, int Kmax)
@@ -69,9 +89,10 @@ List SN(std::vector<double> data, int Kmax)
   // Cost calculation for each sub-segment
   for (int k = 1; k < Kmax; k++)
   {
-    for (size_t t = 1; t < n + 1; t++)
+    const size_t minimum_start = static_cast<size_t>(k);
+    for (size_t t = minimum_start + 1; t < n + 1; t++)
     {
-      for (size_t s = 0; s < t; s++)
+      for (size_t s = minimum_start; s < t; s++)
       {
         tempQ = costQ(s,k-1) + (S2[t] - S2[s]) - (S1[t] - S1[s]) * (S1[t] - S1[s]) / (t - s);
         if (tempQ < costQ(t,k))
@@ -88,13 +109,13 @@ List SN(std::vector<double> data, int Kmax)
   //
   // Change points reconstruction
   List changepoints(Kmax);
-  IntegerVector cp(1);   // k segments
+  IntegerVector cp(1);   // one segment
   cp[0] = n;
   changepoints[0] = cp;
 
   for (int k = 1; k < Kmax; k++)
   {
-    IntegerVector cp(k+1);   // k segments
+    IntegerVector cp(k+1);   // k + 1 segments
     cp[k] = n;
     int t = n;
     int curr_k = k;
@@ -111,13 +132,10 @@ List SN(std::vector<double> data, int Kmax)
 
   return List::create(
     Named("changepoints") = changepoints,
-    Named("lastIndexSet") = NULL,
-    Named("nb") = NULL,
+    Named("lastIndexSet") = R_NilValue,
+    Named("nb") = R_NilValue,
     Named("costQ") = costQ);
 }
-
-
-
 
 
 

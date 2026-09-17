@@ -2,21 +2,41 @@
 % Please edit documentation in R/validity_test.R
 \name{valid_FOCUS}
 \alias{valid_FOCUS}
-\title{Validity Test Based on FOCuS}
+\title{FOCuS Validity Test for Every Prefix}
 \usage{
 valid_FOCUS(y, gamma)
 }
 \arguments{
 \item{y}{A numeric vector representing a segment of the signal.}
 
-\item{gamma}{A numeric value used as a threshold in the validation function and as a penalty for each segment.}
+\item{gamma}{A numeric threshold for the FOCuS statistic.}
 }
 \value{
-A logical value indicating whether the segment is considered valid (TRUE if no changepoint detected).
+\code{TRUE} if the statistic is strictly below \code{gamma} for every prefix
+of \code{y}; otherwise, \code{FALSE}.
 }
 \description{
-Checks whether a given segment is valid (i.e., has no changepoint).
+Tests whether the FOCuS statistic remains below \code{gamma} for
+every prefix of the segment. It is the prefix-wise validity rule available
+for use with \code{\link[=svp0]{svp0()}}.
 }
 \details{
-Validity Test Based on FOCuS
+FOCuS Validity Test for Every Prefix
+
+\code{valid_FOCUS()} updates the FOCuS statistic after each observation
+and returns \code{FALSE} as soon as a prefix statistic reaches or exceeds
+\code{gamma}. Use it with \code{\link[=svp0]{svp0()}} when every prefix must be valid. In contrast,
+\code{\link[=SVP]{SVP()}} with \code{test = "gaussian_mean"} checks only the statistic at the
+current segment endpoint, and \code{\link[=valid_FOCUS_last]{valid_FOCUS_last()}} checks only the final
+statistic of a supplied segment.
+}
+\examples{
+set.seed(1)
+data <- ts_generator(
+  chpts = 40, parameters = 0, sd_noise = 1, type = "gauss"
+)
+valid_FOCUS(data, gamma = 2 * log(length(data)))
+}
+\seealso{
+\code{\link[=valid_FOCUS_last]{valid_FOCUS_last()}}
 }

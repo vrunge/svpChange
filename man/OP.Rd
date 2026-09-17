@@ -9,23 +9,44 @@ OP(data, penalty)
 \arguments{
 \item{data}{A numeric vector representing the data to segment.}
 
-\item{penalty}{A double value representing the penalty term for adding a new segment.}
+\item{penalty}{Numeric penalty applied to each estimated change point.}
 }
 \value{
-A list with (1) the `\code{changepoints}` elements, (2) a vector `\code{nb}` saving the number of non-pruned elements at each iteration, (3) a vector `\code{lastIndexSet}` containing the non-pruned indices at the end of the algo and (4) a vector `\code{costQ}` saving the optimal cost at each time step. The elements `\code{nb}` and `\code{lastIndexSet}` are set to NULL. They are included for consistency with other algorithms that prune the number of indices to be tracked over time.
+A list with the following components:
+\describe{
+\item{changepoints}{Increasing, one-based, inclusive segment endpoints,
+including \code{length(data)}.}
+\item{lastIndexSet}{Always \code{NULL}; OP does not prune candidates.}
+\item{nb}{Always \code{NULL}; OP does not prune candidates.}
+\item{costQ}{Numeric vector of length \code{length(data)}. Element \code{t} is the
+minimum penalized cost for \code{data[1:t]}.}
+}
 }
 \description{
-This function implements the OP algorithm of a given vector `data` with a given penalty term.
-It finds the optimal change points that minimize a penalized cost using dynamic programming.
+Finds the least-squares segmentation minimizing the sum of
+within-segment squared errors plus \code{penalty} times the number of estimated
+change points.
 }
 \details{
 Optimal Partitioning Algorithm
+
+A candidate boundary \code{s} and endpoint \code{t} represent the R segment
+\code{data[(s + 1):t]}. Setting the initial cost to \code{-penalty} makes the total
+penalty equal to \code{penalty * (K - 1)} for a partition with \code{K} segments.
 }
 \examples{
-n <- 1000
-data <- rep(c(0, 1, -0.5, 0), each = n) + rnorm(4 * n)
+set.seed(1)
+data <- ts_generator(
+  chpts = c(40, 80, 120), parameters = c(0, 2, -1),
+  sd_noise = 1, type = "gauss"
+)
 penalty <- 2 * log(length(data))
 OPres <- OP(data, penalty)
 OPres$changepoints
 
+}
+\seealso{
+\code{\link[=PELT]{PELT()}} for the pruned version of the same objective, \code{\link[=SN]{SN()}} for
+fixed numbers of segments, and \code{\link[=SVP]{SVP()}} for validity-constrained
+partitioning.
 }

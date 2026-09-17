@@ -9,28 +9,46 @@ PELT(data, penalty)
 \arguments{
 \item{data}{A numeric vector representing the data to segment.}
 
-\item{penalty}{A double value representing the penalty term for adding a new segment.}
+\item{penalty}{Numeric penalty applied to each estimated change point.}
 }
 \value{
-A list with the following elements:
-\itemize{
-  \item \code{changepoints}: the last index of each segment,
-  \item \code{nb}: a vector saving the number of non-pruned elements at each iteration,
-  \item \code{lastIndexSet}: a vector containing the non-pruned indices at the end of the algorithm,
-  \item \code{costQ}: a vector saving the optimal cost at each time step.
+A list with the following components:
+\describe{
+\item{changepoints}{Increasing, one-based, inclusive segment endpoints,
+including \code{length(data)}.}
+\item{lastIndexSet}{Zero-based candidate boundaries remaining after the
+final iteration, returned in decreasing order and including
+\code{length(data)}.}
+\item{nb}{Numeric vector in time order. Element \code{t} is the number of
+candidates examined at endpoint \code{t}, before pruning.}
+\item{costQ}{Numeric vector of length \code{length(data)}. Element \code{t} is the
+minimum penalized cost for \code{data[1:t]}.}
 }
 }
 \description{
-This function implements the OP algorithm using PELT of a given vector `data` with a given penalty term.
-It finds the optimal change points that minimize the cost function using dynamic programming.
+Finds the same penalized least-squares segmentation as
+\code{\link[=OP]{OP()}}, while using the PELT rule to prune candidate boundaries.
 }
 \details{
 Optimal Partitioning algorithm using PELT
+
+A candidate boundary \code{s} and endpoint \code{t} represent the R segment
+\code{data[(s + 1):t]}. Setting the initial cost to \code{-penalty} makes the total
+penalty equal to \code{penalty * (K - 1)} for a partition with \code{K} segments.
+The pruning changes the candidate set, not the optimized objective.
 }
 \examples{
-n <- 1000
-data <- rep(c(0, 1, -0.5, 0), each = n) + rnorm(4 * n)
+set.seed(1)
+data <- ts_generator(
+  chpts = c(40, 80, 120), parameters = c(0, 2, -1),
+  sd_noise = 1, type = "gauss"
+)
 penalty <- 2 * log(length(data))
 resPELT <- PELT(data, penalty)
 
+}
+\seealso{
+\code{\link[=OP]{OP()}} for the unpruned version of the same objective, \code{\link[=SN]{SN()}} for
+fixed numbers of segments, and \code{\link[=SVP]{SVP()}} for validity-constrained
+partitioning.
 }
