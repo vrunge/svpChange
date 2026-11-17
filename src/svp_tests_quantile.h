@@ -327,11 +327,22 @@ public:
       return std::numeric_limits<double>::quiet_NaN();
 
     // For the first few points, just use the empirical quantile
-    if (count_ <= 5) {
+    if (count_ > 0 && count_ <= 5) {
       double tmp[5];
       for (int i = 0; i < count_; ++i)
         tmp[i] = q_[i];
-      std::sort(tmp, tmp + count_);
+
+      // Keep this bounded sort explicit: Rtools' GCC cannot prove the
+      // std::sort iterator range is within the five-element array.
+      for (int i = 1; i < count_; ++i) {
+        const double value = tmp[i];
+        int j = i;
+        while (j > 0 && value < tmp[j - 1]) {
+          tmp[j] = tmp[j - 1];
+          --j;
+        }
+        tmp[j] = value;
+      }
 
       double pos  = (count_ - 1) * p_;
       int index   = static_cast<int>(std::round(pos));

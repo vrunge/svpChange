@@ -1,0 +1,249 @@
+\documentclass[11pt]{article}
+\usepackage[margin=2.7cm]{geometry}
+\usepackage{amsmath,amssymb}
+\usepackage{booktabs}
+\usepackage{hyperref}
+\setlength{\parindent}{0pt}
+\setlength{\parskip}{0.6\baselineskip}
+
+\title{Validity Tests and Calibration for the Four Methods\\
+in \texttt{f1\_four\_methods.pdf}}
+\author{svpChange simulation notes}
+\date{\today}
+
+\newcommand{\gam}{\gamma}
+
+\begin{document}
+\maketitle
+
+\section{Setup}
+
+All four methods are compared on independent Gaussian data $y_1,\dots,y_n$
+with $n = 1000$ and unit noise variance ($\sigma^2 = 1$). Every method's
+threshold is calibrated, by direct Monte Carlo simulation under the null
+model ($y_t \sim \mathcal N(0,1)$, no changepoint), to a target
+\emph{null false-detection probability} of $1\%$: the probability that the
+method reports at least one changepoint in pure noise. Calibration and
+validation use independent seed ranges so the reported false-positive rate
+(FPR) is an honest, non-reused estimate.
+
+Detection performance is then measured as F1 (harmonic mean of precision
+and recall, with a tolerance window of $\mathrm{round}(0.0025\,n) = 2$
+observations for matching an estimated boundary to a true one) across four
+signal scenarios (\texttt{none}, \texttt{up}, \texttt{updown}, \texttt{rand1})
+and a grid of jump sizes.
+
+Three of the four methods (\emph{SVP both}, \emph{SVP SMUCE}, and
+\emph{SVP both\_calibrated}) are instances of the \textbf{Smallest Valid
+Partitioning} (SVP) framework: among all partitions of the series into
+segments that each pass a chosen \emph{validity test}, SVP returns the one
+with the fewest segments, breaking ties by within-segment sum of squared
+deviations from the segment mean.
+
+\subsection*{The Gaussian FOCUS statistic}
+
+For a candidate segment spanning $y_{u+1:t}$, define the standardized
+two-sample CUSUM at an internal split $\tau \in (u,t)$,
+\[
+Z_{u,\tau,t} = \sqrt{\frac{(\tau-u)(t-\tau)}{t-u}}
+\left(\bar y_{u+1:\tau} - \bar y_{\tau+1:t}\right),
+\]
+and the FOCUS statistic
+\[
+f_{\mathrm{FOCUS}}(y_{u:t}) = \max_{u<\tau<t} Z_{u,\tau,t}^2 .
+\]
+Under the null (no change in $[u,t]$), $Z_{u,\tau,t}^2/\sigma^2$ is
+pointwise $\chi^2_1$; the FOCUS algorithm computes the running maximum over
+$\tau$ incrementally in expected $O(\log m)$ time per new observation, where
+$m = t-u$ is the candidate's current length.
+
+\subsection*{Candidate pruning rules}
+
+SVP maintains one candidate per possible segment start. The
+\texttt{subtests} rule decides what happens to a candidate whose current
+endpoint fails its validity test:
+\begin{itemize}
+\item \textbf{\texttt{none}}: the candidate is retained and may pass again
+  later (no permanent memory of failure).
+\item \textbf{\texttt{right}}: the candidate is removed permanently.
+\item \textbf{\texttt{both}}: the candidate is removed permanently, and so
+  is every \emph{older} candidate sharing the same current endpoint (the
+  \emph{inclusive left-pruning rule}). This is exact only when the test
+  statistic is non-decreasing as a candidate widens.
+\end{itemize}
+All three SVP-based methods below use \texttt{subtests = "both"}.
+
+\section{PELT}
+
+PELT (Pruned Exact Linear Time; Killick et al., 2012) is not a validity
+test in the SVP sense but a penalized optimal partitioning method: it
+minimizes $\sum_k \mathrm{RSS}_k + c\log(n)\cdot K$ over all partitions into
+$K$ segments, where $\mathrm{RSS}_k$ is the within-segment residual sum of
+squares. Only the multiplicative constant $c$ is tuned.
+
+\paragraph{Calibration.} $c$ was grid-searched over $\{2.000, 2.005,
+\dots, 2.350\}$ at $n=1000$, with $20{,}000$ null replicates per grid point
+(seed $8{,}100{,}000$), selecting the $c$ whose empirical false-detection
+rate is closest to $1\%$. The selection was confirmed on an independent set
+of $10{,}000$ validation replicates (seed $8{,}200{,}000$).
+
+\begin{center}
+\begin{tabular}{lccc}
+\toprule
+Constant $c$ & Calibration FPR (20k reps) & Validation FPR (10k reps) \\
+\midrule
+$2.115$ & $1.010\%$ & $1.030\%$ \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\section{SVP both}
+
+\paragraph{Validity test.} A candidate segment $y_{s:t}$ is valid iff
+\[
+f_{\mathrm{FOCUS}}(y_{s:t})/\sigma^2 \le \gam = c\log n,
+\]
+i.e.\ the plain FOCUS statistic at the candidate's own fixed start $s$ and
+current endpoint $t$, compared against a threshold proportional to
+$\log n$ ($n$ the \emph{total} series length, fixed for the whole run).
+Pruned with \texttt{subtests = "both"}.
+
+\paragraph{Calibration.} The constant $c$ targets the \emph{aggregate}
+null distribution actually exercised across a whole run: the maximum of
+$f_{\mathrm{FOCUS}}(y_{u:t})/\sigma^2$ over \emph{every} start $u$ and
+\emph{every} contained split, i.e.\ $\max_{1\le u<\tau<t\le n}
+Z_{u,\tau,t}^2/\sigma^2$. This quantity was computed exactly
+(\texttt{gaussian\_critical\_values.cpp}) on $20{,}000$ null series of
+length $n=1000$ (seed $8{,}100{,}000$); $c$ was set to the smallest grid
+value (step $0.002$) whose empirical exceedance rate is closest to $1\%$.
+Validated on $10{,}000$ independent replicates (seed $8{,}200{,}000$).
+
+\begin{center}
+\begin{tabular}{lccc}
+\toprule
+Constant $c$ & Calibration FPR (20k reps) & Validation FPR (10k reps) \\
+\midrule
+$4.130$ & $1.00\%$ & $0.99\%$ \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\section{SVP SMUCE}
+
+\paragraph{Validity test.} SMUCE (Simultaneous MUlti-scale
+Change-point Estimator; Frick, Munk \& Sieling, 2014) is itself a
+multiscale test: a candidate segment is valid iff a likelihood-ratio-type
+statistic maximized over \emph{every} sub-interval of the segment does not
+exceed a threshold $\gam$. Concretely, \texttt{svp\_smuce\_cpp} evaluates,
+for the full series, the minimum $\gam$ for which the SMUCE feasibility
+constraint holds -- this is the SMUCE critical value for that realization.
+
+\paragraph{Calibration.} The critical value was computed on $20{,}000$
+null series of length $n=1000$ (seed $11{,}100{,}000$); $\gam$ was set to
+its empirical $99\%$ quantile (type-1/inverse-CDF quantile, so that exactly
+the target fraction of calibration replicates exceed it by construction).
+Validated on $10{,}000$ independent replicates (seed $12{,}100{,}000$).
+
+\begin{center}
+\begin{tabular}{lccc}
+\toprule
+Threshold $\gam$ & Calibration FPR (20k reps) & Validation FPR (10k reps) \\
+\midrule
+$1.3983$ & $1.00\%$ & $0.78\%$ \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\section{SVP both\_calibrated (recalibrated)}
+
+This method asks a different question from \emph{SVP both}: instead of a
+single threshold fixed for the whole run (based on the total length $n$),
+can the threshold instead adapt to each candidate's \emph{own current
+length} $l = t-s$ as it grows?
+
+\paragraph{Validity test.} The statistic is \emph{exactly the same}
+single-anchored FOCUS quantity as plain \emph{SVP both},
+$f_{\mathrm{FOCUS}}(y_{s:t})/\sigma^2$ (fixed start $s$, fixed current
+endpoint $t$, maximized only over the internal split $\tau$) -- \emph{not}
+a double maximum over all sub-intervals of $[s,t]$. What changes is the
+threshold, now a function of the candidate's own length:
+\[
+\gam(l) = A\log l + B\log\log l + C, \qquad l \ge 10,
+\]
+with candidates shorter than $10$ observations always valid (the form is
+undefined for $l \le e$). Pruned with \texttt{subtests = "both"}.
+
+\paragraph{Why not reuse the \emph{multiscale\_both} fit directly.} The
+$(A,B,C)$ curve used elsewhere in this codebase for a length-dependent
+threshold (the \emph{multiscale\_both} method) was fitted to the empirical
+$99\%$ quantile of the \emph{aggregate double-max} statistic
+$\max_{1\le u<\tau<t\le n} Z_{u,\tau,t}^2/\sigma^2$ as a function of the
+\emph{total} length $n$ -- the same aggregate quantity used to calibrate
+plain \emph{SVP both} above. Plugging that curve in with $l$ equal to a
+candidate's own length, but comparing it to the much narrower
+single-anchored statistic used here, is a mismatch: the double max is never
+smaller than the single-anchored statistic it is calibrated against, so the
+resulting threshold is far too permissive. Using it as-is
+($A=1.683,\ B=6.209,\ C=4.939$, the multiscale\_both fit) gives an
+empirical null false-detection rate of approximately $75\%$ at $n=1000$
+under \texttt{"both"} pruning -- a badly miscalibrated test, not used in
+the final figure, but useful as a demonstration of the mismatch.
+
+\paragraph{Calibration actually used.} A direct search was run instead.
+Four candidate shapes for $(A,B)$ were tried (the multiscale\_both shape
+rescaled, a flat/constant threshold $A=B=0$, a mild-growth shape $A=B=1$,
+and a pure-log shape $A=2,B=0$); for each shape, $C$ was found by
+bisection, simulating $500$ null replicates of length $n=1000$ per
+evaluation, to bring the empirical false-detection rate close to $1\%$.
+Each calibrated shape was then scored by its mean F1 on the
+\texttt{updown} scenario at jump size $0.6$, and the best-scoring shape was
+kept.
+
+\begin{center}
+\begin{tabular}{lccc}
+\toprule
+Shape $(A,B)$ & Calibrated $C$ & FPR (500 reps) & F1 @ jump $0.6$ \\
+\midrule
+$(1.683,\,6.209)$ (rescaled) & $14.939$ & $1.2\%$ & $0.077$ \\
+$(0,\,0)$ (flat)             & $34.939$ & $0.0\%$ & $0.030$ \\
+$(1,\,1)$ (mild growth)      & $22.439$ & $1.0\%$ & $0.082$ \\
+$(2,\,0)$ (pure log) \textbf{(selected)} & $19.939$ & $1.6\%$ & $0.091$ \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+The method shown in \texttt{f1\_four\_methods.pdf} uses the selected shape,
+$A=2$, $B=0$, $C=19.939$, i.e.\
+\[
+\gam(l) = 2\log l + 19.939 ,
+\]
+giving an empirical null false-detection rate of approximately
+$1$--$2\%$ at $n=1000$ (search-stage resolution: $500$ replicates per
+evaluated point, so a margin of roughly $\pm 1.1$ percentage points around
+each reported rate).
+
+\section{Summary}
+
+\begin{center}
+\begin{tabular}{llc}
+\toprule
+Method & Threshold & Validated null FPR \\
+\midrule
+PELT & $c\log n$, $c=2.115$ & $1.03\%$ (10k reps) \\
+SVP both & $c\log n$, $c=4.130$ & $0.99\%$ (10k reps) \\
+SVP SMUCE & $\gam = 1.3983$ & $0.78\%$ (10k reps) \\
+SVP both\_calibrated & $\gam(l)=2\log l + 19.939$ & $\approx 1$--$2\%$ (500 reps) \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+The first three methods are calibrated on much larger replicate counts
+($10^4$) and to an aggregate or feasibility statistic that is exact for the
+respective test; \emph{SVP both\_calibrated} is calibrated on a much
+smaller sample ($500$ replicates per grid point) via a length-adaptive
+threshold that has no closed-form target quantile, so its reported FPR is
+less precise. It is included in the comparison as an exploratory
+length-adaptive alternative, not as a fully validated method on the same
+footing as the other three.
+
+\end{document}

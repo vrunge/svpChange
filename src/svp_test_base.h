@@ -15,7 +15,7 @@ class TestBase
     virtual bool passes(double gamma) const
     {
       const double value = statistic();
-      return std::isfinite(value) && value < gamma;
+      return std::isfinite(value) && value <= gamma;
     }
 };
 

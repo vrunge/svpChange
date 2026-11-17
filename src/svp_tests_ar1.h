@@ -28,9 +28,8 @@ public:
   double statistic() const override
   {
     if (observation_count_ < 4) return 0.0;
-    // Unified AR FOCuS returns the conventional 2 log-likelihood ratio;
-    // SVP's gamma and exact AR1 test use the half-log-likelihood scale.
-    return std::max(0.0, 0.5 * info_.max_statistic() / sigma2_);
+    // Unified AR FOCuS returns the full RSS reduction for unit variance.
+    return std::max(0.0, info_.max_statistic() / sigma2_);
   }
 
 
@@ -182,15 +181,15 @@ private:
           std::numeric_limits<double>::epsilon() * cached_rss0_) {
         cached_statistic_ = std::numeric_limits<double>::infinity();
       } else if (best_rss > 0.0 && cached_rss0_ > best_rss) {
-        // Use the log-likelihood-ratio scale (FOCuS uses this convention).
+        // Use the full likelihood-ratio scale.
         cached_statistic_ =
-          0.5 * static_cast<double>(transition_count) *
+          static_cast<double>(transition_count) *
           std::log(cached_rss0_ / best_rss);
       }
     } else {
-      // Half the usual 2 log-likelihood ratio, matching Gaussian FOCuS.
+      // Full RSS reduction, normalized by the innovation variance.
       cached_statistic_ =
-        std::max(0.0, (cached_rss0_ - best_rss) / (2.0 * sigma2_));
+        std::max(0.0, (cached_rss0_ - best_rss) / sigma2_);
     }
     dirty_ = false;
   }

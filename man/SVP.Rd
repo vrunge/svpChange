@@ -19,18 +19,27 @@ SVP(
 \item{data}{Numeric vector containing the univariate series. Missing and
 non-finite values are not supported.}
 
-\item{gamma}{Positive finite scalar validity threshold. Larger values
+\item{gamma}{Finite scalar validity threshold, positive except when
+\code{subtests = "verzelen"}, \code{subtests = "both_msl"},
+\code{subtests = "both_ms_refined"}, or \code{subtests = "both_focus_lil"}.
+Larger values
 generally accept longer or less homogeneous segments.}
 
 \item{test}{Character scalar selecting a validity test; see Details. Defaults
 to \code{"gaussian_mean"}.}
 
 \item{subtests}{Character scalar selecting the validity-pruning rules:
-\code{"both"} (default), \code{"right"}, or \code{"none"}.}
+\code{"both"} (default), \code{"right"}, \code{"none"},
+\code{"verzelen"}, \code{"both_msl"}, \code{"both_ms_refined"}, or
+\code{"both_focus_lil"}. The last four options select multiscale Gaussian
+tests described in Details.}
 
 \item{sigma2}{Positive finite innovation variance for fixed-variance AR1
 tests (\code{"AR1"} with \code{profile_sigma = FALSE}, and
-\code{"AR1Focus"}). It is the conditional/error variance of the new AR(1)
+\code{"AR1Focus"}), or known observation noise variance for
+\code{subtests = "verzelen"}, \code{subtests = "both_msl"},
+\code{subtests = "both_ms_refined"}, or \code{subtests = "both_focus_lil"}
+(default 1). For AR(1), it is the variance of the new
 shock, not the marginal variance of the observed series. It is ignored by
 \code{"AR1Profile"} and by \code{"AR1"} when
 \code{profile_sigma = TRUE}.}
@@ -79,11 +88,90 @@ endpoint does not remove the candidate and it can recover later. With
 \code{subtests = "right"} or \code{subtests = "both"}, it is removed
 immediately. With \code{subtests = "both"}, an invalid boundary also removes
 that boundary and every older boundary under the inclusive left-pruning rule.
+\code{subtests = "both_msl"}, \code{subtests = "both_ms_refined"}, and
+\code{subtests = "both_focus_lil"} use this pruning rule with multiscale
+Gaussian statistics.
 Among partitions with the same number of
 segments, it chooses the one with the smallest within-segment cost, selected
 with \code{cost}. Validity statistics are maintained incrementally in C++.
 }
 \details{
+\subsection{Verzelen multiscale validity}{
+With \code{test = "gaussian_mean", subtests = "verzelen"}, a standalone
+scanner tests every pair of adjacent nonempty intervals contained in the
+candidate. Write \eqn{N} for the full data length and
+\eqn{C(a,b,c)=\sqrt{(b-a)(c-b)/(c-a)}
+(\bar y_{a+1:b}-\bar y_{b+1:c})}. The candidate \eqn{(s,t]} is valid iff
+\deqn{V_s(t)=\max_{s\le a<b<c\le t}\left\{
+C(a,b,c)^2/(4\sigma^2)-2\log\left(\frac{N(c-a)}{(b-a)(c-b)}\right)
+\right\}\le\gamma.}
+Singletons have statistic minus infinity and are always valid. The global
+length \eqn{N} stays fixed for shorter segments. Each candidate maintains
+its current maximum using
+\eqn{V_s(t)=\max\{V_s(t-1),V_{s+1}(t),H(s,t)\}}, where \eqn{H(s,t)}
+scans all splits with outer boundaries \eqn{s,t}. Containment justifies
+permanent pruning in both directions. FOCUS bounds skip scans that cannot
+improve the maximum; all splits are checked otherwise. Worst-case total
+time is cubic in \eqn{N}, with quadratic worst-case state storage.
+
+This rule is inspired by the simultaneous CUSUM noise bound on slide 15
+(PDF page 38) of Nicolas Verzelen's 2023 workshop presentation
+\emph{Optimal multiple change-point detection and Localization}.
+It implements the bound with factor 4 and known noise variance \code{sigma2}.
+A finite negative \code{gamma} is allowed for empirical null calibration;
+such thresholds do not inherit the slide's positive-parameter probability
+bound. \code{gamma} is a direct threshold, not a multiplier of \code{log(N)}.
+}
+\subsection{MS-l multiscale validity}{
+With \code{test = "gaussian_mean", subtests = "both_msl"}, consider every
+interval of length \eqn{\ell} within a candidate segment. At split \eqn{\tau},
+let \eqn{r_\tau} be the shorter side and \eqn{Z_\tau} the Gaussian
+two-sample CUSUM. The interval passes if
+\deqn{\max_\tau\left\{|Z_\tau|/\sqrt{\sigma^2}
+-\sqrt{2\log(e\ell/r_\tau)}\right\}\leq\gamma.}
+The \code{"both"} pruning rule makes a candidate valid only if every
+contained interval passes. Singletons always pass. \code{gamma} is the direct
+threshold \eqn{q}, without a \code{log(n)} multiplier. A FOCUS bound skips
+exact split scans when the interval must pass; all potentially failing splits
+are checked exactly.
+}
+\subsection{Refined MS-l multiscale validity}{
+With \code{test = "gaussian_mean", subtests = "both_ms_refined"}, use the
+same contained-interval scan and \code{"both"} pruning as MS-l, but replace
+its split penalty by
+\deqn{\sqrt{2\{1+\log(\ell/r_\tau)+\tfrac12\log(n/\ell)\}}.}
+Here \eqn{n} is the full series length, \eqn{\ell} the interval length,
+and \eqn{r_\tau} the shorter side of the split. The coefficient \eqn{1/2}
+was selected in the separate Gaussian penalty study. The direct threshold
+\eqn{\gamma} is calibrated to the null distribution; for \eqn{n=1000},
+\eqn{\sigma^2=1}, and 1\% nominal false detection, the study obtained
+\eqn{\gamma=2.70947832002059} from 5,000 null series and checked it on
+2,000 independent null series. Other lengths or noise models require their
+own calibration.
+}
+\subsection{FOCUS iterated-logarithm CUSUM}{
+With \code{test = "gaussian_mean", subtests = "both_focus_lil"}, consider a
+contained interval of length \eqn{m} and a split with lengths \eqn{l} and
+\eqn{r=m-l}. Define
+\deqn{h_m(l)=\max\{\min(l,m/l),\min(r,m/r)\},\quad
+p_m(l)=2\log\log(eh_m(l)).}
+The maximum of \eqn{h_m(l)} over splits is
+\deqn{h_m^*=\max\{\lfloor\sqrt m\rfloor,
+m/\lceil\sqrt m\rceil\}.}
+The interval statistic is
+\deqn{\max_l Z_l^2/\sigma^2-8\log\log(eh_m^*),}
+where \eqn{Z_l} is the unstandardized two-sample CUSUM. FOCUS computes
+\eqn{\max_l Z_l^2} exactly, since the penalty depends only on \eqn{m}.
+This statistic is no larger than the position-penalized statistic in Eq. (12)
+and Proposition 2 of Verzelen, Fromont, Lerasle and Reynaud-Bouret (2023),
+\emph{Annals of Statistics} 51, 1586--1610,
+\url{https://doi.org/10.1214/23-AOS2297}, taking their permitted \eqn{L=2}.
+Consequently their single-interval level guarantee applies to this test.
+A candidate segment is valid when every contained interval has statistic
+no greater than \code{gamma}. The proposition does not directly cover the
+scan across all contained intervals, so calibrate \code{gamma} on the
+whole-series null maximum.
+}
 The available validity tests are:
 \itemize{
   \item \code{"gaussian_mean"}: Gaussian FOCUS likelihood-ratio statistic
@@ -126,6 +214,12 @@ candidates examined under the selected \code{subtests} mode.
 Test \tab State update \tab Update and endpoint check \cr
 \code{"gaussian_mean"} \tab amortized \eqn{O(1)}, worst \eqn{O(m)}
   \tab expected \eqn{O(\log m)}, worst \eqn{O(m)} \cr
+\code{"gaussian_mean"}, \code{"both_focus_lil"}
+  \tab amortized \eqn{O(1)}, worst \eqn{O(m)}
+  \tab exact FOCUS maximum, expected \eqn{O(\log m)}, worst \eqn{O(m)} \cr
+\code{"gaussian_mean"}, \code{"both_msl"} or \code{"both_ms_refined"}
+  \tab amortized \eqn{O(1)}, worst \eqn{O(m)}
+  \tab FOCUS bound, exact \eqn{O(m)} scan if needed \cr
 \code{"gamma_rate"} \tab \eqn{O(a_m)}, worst \eqn{O(m)}
   \tab \eqn{O(a_m)}, worst \eqn{O(m)} \cr
 \code{"gaussian_variance"} \tab \eqn{O(a_m)}, worst \eqn{O(m)}
@@ -235,7 +329,7 @@ gaussian_data <- ts_generator(
   chpts = c(20, 40, 60), parameters = c(0, 2, -1),
   sd_noise = 1, type = "gauss"
 )
-SVP(gaussian_data, gamma = 2 * log(length(gaussian_data)),
+SVP(gaussian_data, gamma = 4 * log(length(gaussian_data)),
     test = "gaussian_mean")$changepoints
 
 # Gamma rate: positive exponential observations with changing rates.
@@ -280,7 +374,7 @@ ar1_data <- ts_generator(
   chpts = c(20, 40, 60), parameters = c(0, 2, -1),
   sd_noise = 0.8, rho = 0.7, type = "gaussAR1"
 )
-SVP(ar1_data, gamma = 2 * log(length(ar1_data)), test = "AR1",
+SVP(ar1_data, gamma = 4 * log(length(ar1_data)), test = "AR1",
     rho = 0.7, sigma2 = 0.8^2)$changepoints
 
 # Exact AR(1) with the innovation variance profiled out.

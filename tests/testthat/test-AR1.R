@@ -28,9 +28,9 @@ exact_ar1_reference <- function(data, rho, sigma2 = 1, profile_sigma = FALSE) {
   }, numeric(1))
   best <- which.min(rss1)
   statistic <- if (profile_sigma) {
-    0.5 * (n - 1) * log(rss0 / rss1[best])
+    (n - 1) * log(rss0 / rss1[best])
   } else {
-    (rss0 - rss1[best]) / (2 * sigma2)
+    (rss0 - rss1[best]) / sigma2
   }
   list(
     statistic = statistic,
@@ -53,7 +53,7 @@ test_that("robust AR1 estimate matches equation 3", {
 test_that("AR1 single-change test locates a simulated mean change", {
   set.seed(42)
   data <- simulate_ar1_change(400, 200, c(0, 2), 0.7)
-  result <- AR1_single_change(data, gamma = 10, rho = 0.7)
+  result <- AR1_single_change(data, gamma = 20, rho = 0.7)
 
   expect_false(result$valid)
   expect_lte(abs(result$changepoint - 200), 15)
@@ -117,7 +117,7 @@ test_that("profiled AR1 diagnostics and R validity ignore sigma2", {
 test_that("AR1 validity test works inside SVP", {
   set.seed(42)
   data <- simulate_ar1_change(400, 200, c(0, 2), 0.7)
-  result <- SVP(data, gamma = 10, test = "AR1", rho = 0.7)
+  result <- SVP(data, gamma = 20, test = "AR1", rho = 0.7)
 
   expect_equal(result$rho, 0.7)
   expect_equal(tail(result$changepoints, 1), length(data))
@@ -129,7 +129,7 @@ test_that("AR1 validity test works inside main SVP with pruning options", {
   data <- simulate_ar1_change(400, 200, c(0, 2), 0.7)
   result <- SVP(
     data,
-    gamma = 10,
+    gamma = 20,
     test = "AR1",
     subtests = "both",
     rho = 0.7,
@@ -156,15 +156,15 @@ test_that("AR1Focus matches the conditional AR1 SVP reference", {
     set.seed(1)
     data <- simulate_ar1_change(300, 90, c(0, 1.5), rho)
     exact <- SVP(
-    data, gamma = 8, test = "AR1", rho = rho, sigma2 = 1,
+    data, gamma = 16, test = "AR1", rho = rho, sigma2 = 1,
       subtests = "right"
     )
     focus <- SVP(
-    data, gamma = 8, test = "AR1Focus", rho = rho, sigma2 = 1,
+    data, gamma = 16, test = "AR1Focus", rho = rho, sigma2 = 1,
       subtests = "right"
     )
     reference <- svp0(
-      data, gamma = 8, test = exact_validity(rho),
+      data, gamma = 16, test = exact_validity(rho),
       subtests = "right",
       PELT_pruning = FALSE
     )
@@ -172,7 +172,7 @@ test_that("AR1Focus matches the conditional AR1 SVP reference", {
     # svp0() always ranks equal-length partitions with the Gaussian cost, so
     # the boundary comparison against it uses SVP() on the same cost scale.
     focus_gaussian <- SVP(
-      data, gamma = 8, test = "AR1Focus", rho = rho, sigma2 = 1,
+      data, gamma = 16, test = "AR1Focus", rho = rho, sigma2 = 1,
       subtests = "right", cost = "gaussian"
     )
 
@@ -195,7 +195,7 @@ test_that("AR1Focus matches the conditional reference on randomized streams", {
       data <- simulate_ar1_change(
         n, changepoint, c(0, 1.5), rho
       )
-      gamma <- c(4, 6, 8, 10)[(seed %% 4L) + 1L]
+      gamma <- c(8, 12, 16, 20)[(seed %% 4L) + 1L]
       exact <- SVP(
         data, gamma = gamma, test = "AR1", rho = rho, sigma2 = 1,
         subtests = "right", cost = "gaussian"
@@ -228,7 +228,7 @@ test_that("the AR(1) cost sums the interior innovations of each segment", {
     set.seed(11)
     data <- simulate_ar1_change(240, 120, c(0, 2), rho)
     fit <- SVP(
-      data, gamma = 8, test = "AR1Focus", rho = rho, sigma2 = 1,
+      data, gamma = 16, test = "AR1Focus", rho = rho, sigma2 = 1,
       subtests = "right"
     )
     expect_equal(
@@ -250,7 +250,7 @@ test_that("cost = 'gaussian' keeps the previous squared-error ranking", {
   set.seed(12)
   data <- simulate_ar1_change(240, 120, c(0, 2), 0.7)
   fit <- SVP(
-    data, gamma = 8, test = "AR1Focus", rho = 0.7, sigma2 = 1,
+    data, gamma = 16, test = "AR1Focus", rho = 0.7, sigma2 = 1,
     subtests = "right", cost = "gaussian"
   )
   expect_equal(
@@ -277,7 +277,7 @@ test_that("the AR(1) cost localises a strongly correlated change better", {
     data <- simulate_ar1_change(400, 200, c(0, 4), rho)
     vapply(c("ar1", "gaussian"), function(cost) {
       changepoints <- SVP(
-        data, gamma = 4 * log(400), test = "AR1Focus", rho = rho,
+        data, gamma = 8 * log(400), test = "AR1Focus", rho = rho,
         sigma2 = 1, subtests = "right", cost = cost
       )$changepoints
       internal <- changepoints[changepoints < 400]

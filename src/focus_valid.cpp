@@ -14,7 +14,7 @@ bool focus_valid_cpp(std::vector<double> data,
   GaussianMean test;
   for (double value : data) {
     test.update(value);
-    if (check_all_prefixes && test.statistic() >= gamma) return false;
+    if (check_all_prefixes && test.statistic() > gamma) return false;
   }
-  return test.statistic() < gamma;
+  return test.statistic() <= gamma;
 }

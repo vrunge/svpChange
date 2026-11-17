@@ -363,29 +363,7 @@ plot_paper_time_study <- function(
 
   combined <- combine_time_panels(panel_a, panel_b, base_size = base_size)
 
-  plot_root <- file.path(root, "plots")
-  dir.create(plot_root, recursive = TRUE, showWarnings = FALSE)
   dir.create(paper_root, recursive = TRUE, showWarnings = FALSE)
-  ggplot2::ggsave(
-    file.path(plot_root, paste0(prefix, "_time_vs_n.pdf")),
-    panel_a, width = 9, height = 5.2
-  )
-  ggplot2::ggsave(
-    file.path(plot_root, paste0(prefix, "_time_vs_detected.pdf")),
-    panel_b, width = 9, height = 5.2
-  )
-  ggplot2::ggsave(
-    file.path(paper_root, paste0(paper_prefix, "_time_vs_n.pdf")),
-    panel_a, width = 9, height = 5.2
-  )
-  ggplot2::ggsave(
-    file.path(paper_root, paste0(paper_prefix, "_time_vs_detected.pdf")),
-    panel_b, width = 9, height = 5.2
-  )
-  ggplot2::ggsave(
-    file.path(plot_root, paste0(prefix, "_time_pair.pdf")),
-    combined, width = 13.2, height = 5.6
-  )
   ggplot2::ggsave(
     file.path(paper_root, paste0(paper_prefix, "_time.pdf")),
     combined, width = 13.2, height = 5.6
@@ -398,67 +376,4 @@ plot_paper_time_study <- function(
     summary_detected = summary_detected,
     slopes = slopes
   )
-}
-
-plot_time_study <- function(results, root, prefix) {
-  dir.create(file.path(root, "plots"), recursive = TRUE, showWarnings = FALSE)
-  vary_n <- dplyr::filter(results, experiment == "vary_n")
-  vary_k <- dplyr::filter(results, experiment == "vary_k")
-  positive_vary_n <- dplyr::filter(vary_n, is.finite(time), time > 0)
-  positive_results <- dplyr::filter(results, is.finite(time), time > 0)
-
-  time_vs_n <- ggplot2::ggplot(
-    positive_vary_n, ggplot2::aes(n, time, colour = method)
-  ) +
-    ggplot2::geom_smooth(method = "lm", formula = y ~ x, se = TRUE) +
-    ggplot2::scale_x_log10() +
-    ggplot2::scale_y_log10() +
-    ggplot2::labs(
-      x = "Sequence length (log scale)", y = "Time (s, log scale)"
-    ) +
-    ggplot2::theme_minimal() +
-    ggplot2::theme(legend.position = "top", legend.direction = "horizontal")
-
-  time_vs_k <- ggplot2::ggplot(
-    vary_k, ggplot2::aes(k, time, colour = method)
-  ) +
-    ggplot2::geom_smooth(method = "loess", se = TRUE) +
-    ggplot2::labs(x = "True number of changes", y = "Time (s)") +
-    ggplot2::theme_minimal() +
-    ggplot2::theme(legend.position = "top", legend.direction = "horizontal")
-
-  time_vs_detected <- ggplot2::ggplot(
-    positive_results, ggplot2::aes(detected, time, colour = method)
-  ) +
-    ggplot2::geom_smooth(method = "loess", se = TRUE) +
-    ggplot2::scale_y_log10() +
-    ggplot2::labs(
-      x = "Detected number of segments", y = "Time (s, log scale)"
-    ) +
-    ggplot2::theme_minimal() +
-    ggplot2::theme(legend.position = "top", legend.direction = "horizontal")
-
-  plots <- list(
-    time_vs_n = time_vs_n,
-    time_vs_k = time_vs_k,
-    time_vs_detected = time_vs_detected
-  )
-  for (name in names(plots)) {
-    ggplot2::ggsave(
-      file.path(root, "plots", paste0(prefix, "_", name, ".pdf")),
-      plots[[name]], width = 8, height = 5
-    )
-  }
-  invisible(plots)
-}
-
-save_time_outputs <- function(results, root, prefix) {
-  dir.create(root, recursive = TRUE, showWarnings = FALSE)
-  saveRDS(results, file.path(root, paste0(prefix, "_results.rds")))
-  utils::write.csv(
-    results, file.path(root, paste0(prefix, "_results.csv")),
-    row.names = FALSE
-  )
-  plot_time_study(results, root, prefix)
-  invisible(results)
 }

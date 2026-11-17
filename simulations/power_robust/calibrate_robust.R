@@ -11,10 +11,25 @@ source(file.path("simulations", "power_common.R"))
 ROBUST_CALIBRATION_N <- 1000L
 ROBUST_CALIBRATION_REPS <- 20000L
 ROBUST_VALIDATION_REPS <- 10000L
-ROBUST_CALIBRATION_SEED <- 910000L
-ROBUST_VALIDATION_SEED <- 920000L
-ROBUST_RFPOP_TARGET <- 0.99
+ROBUST_CALIBRATION_SEED <- 9100000L
+ROBUST_VALIDATION_SEED <- 9200000L
+ROBUST_NULL_TARGET <- 0.99
 ROBUST_CALIBRATION_ROOT <- file.path("simulations", "power_robust")
+
+format_robust_parameter <- function(x) {
+  trimws(formatC(x, format = "fg", digits = 6))
+}
+
+robust_method_labels <- function(calibration) {
+  selected <- calibration$selected
+  c(
+    "PELT", "RFPOP",
+    paste0("SVP MedianMood / right / alpha = ",
+           format_robust_parameter(selected$mood_alpha)),
+    paste0("SVP Wilcoxon / right / c = ",
+           format_robust_parameter(selected$wilcoxon_constant))
+  )
+}
 ## robseg names its biweight loss "Outlier".
 RFPOP_LOSS <- "Outlier"
 
@@ -166,7 +181,7 @@ gaussian_pelt_benchmark <- function() {
   if (file.exists(results_path)) {
     results <- utils::read.csv(results_path, stringsAsFactors = FALSE)
     scores <- results$F1[
-      results$algorithm == "PELT" & results$pattern == "none"
+      grepl("^PELT", results$algorithm) & results$pattern == "none"
     ]
     interval <- wilson_interval(sum(scores == 1), length(scores))
     return(data.frame(
@@ -230,26 +245,22 @@ run_robust_calibration <- function(
     validation_reps = ROBUST_VALIDATION_REPS,
     calibration_seed = ROBUST_CALIBRATION_SEED,
     validation_seed = ROBUST_VALIDATION_SEED,
-    rfpop_target = ROBUST_RFPOP_TARGET,
-    rfpop_grid = seq(2, 4, 0.5),
-    wilcoxon_grid = seq(1.25, 2.25, 0.25),
-    mood_grid = c(0.0001, 0.0005, 0.001, 0.005, 0.01, 0.02),
+    null_target = ROBUST_NULL_TARGET,
+    rfpop_grid = seq(2.60, 2.80, 0.01),
+    wilcoxon_grid = seq(1.58, 1.72, 0.01),
+    mood_grid = seq(0.005, 0.009, 0.0001),
     workers = 1L, write_outputs = TRUE) {
   calibration_null <- student_null_stream(n, calibration_reps, calibration_seed)
   rfpop_calibration <- evaluate_null_candidates(
     rfpop_grid, "RFPOP", n, calibration_reps, calibration_seed,
     oracle_segments = 1L, workers = workers, null_series = calibration_null
   )
-  admissible <- rfpop_calibration[rfpop_calibration$null_f1 >= rfpop_target, ]
-  if (!nrow(admissible)) {
-    stop("RFPOP calibration grid does not attain the nominal null F1 target")
+  select_closest <- function(scores) {
+    scores[which.min(abs(scores$null_f1 - null_target)), ]
   }
-  selected_rfpop <- admissible[which.min(admissible$candidate), ]
+  selected_rfpop <- select_closest(rfpop_calibration)
   selected_rfpop_constant <- selected_rfpop$candidate
-  rfpop_target_interval <- c(
-    lower = selected_rfpop$null_f1_lower,
-    upper = selected_rfpop$null_f1_upper
-  )
+  target_interval <- c(lower = NA_real_, upper = NA_real_)
 
   wilcoxon_calibration <- evaluate_null_candidates(
     wilcoxon_grid, "Wilcoxon", n, calibration_reps, calibration_seed,
@@ -259,18 +270,15 @@ run_robust_calibration <- function(
     mood_grid, "MedianMood", n, calibration_reps, calibration_seed,
     oracle_segments = 1L, workers = workers, null_series = calibration_null
   )
-  select_closest <- function(scores) {
-    scores[which.min(abs(scores$null_f1 - selected_rfpop$null_f1)), ]
-  }
   selected_wilcoxon <- select_closest(wilcoxon_calibration)
   selected_mood <- select_closest(mood_calibration)
   selected <- list(
     rfpop_constant = selected_rfpop_constant,
     wilcoxon_constant = selected_wilcoxon$candidate,
     mood_alpha = selected_mood$candidate,
-    rfpop_target_f1 = selected_rfpop$null_f1,
-    rfpop_target_f1_lower = selected_rfpop$null_f1_lower,
-    rfpop_target_f1_upper = selected_rfpop$null_f1_upper,
+    rfpop_target_f1 = null_target,
+    rfpop_target_f1_lower = NA_real_,
+    rfpop_target_f1_upper = NA_real_,
     n = n, oracle_segments_null = 1L,
     calibration_reps = calibration_reps,
     validation_reps = validation_reps,
@@ -314,31 +322,31 @@ run_robust_calibration <- function(
   gaussian_benchmark <- gaussian_pelt_benchmark()
   all_scores <- dplyr::bind_rows(
     attach_calibration_metadata(
-      rfpop_calibration, "calibration", selected_rfpop$null_f1,
-      rfpop_target_interval, validation_reps, validation_seed, selected,
+      rfpop_calibration, "calibration", null_target,
+      target_interval, validation_reps, validation_seed, selected,
       gaussian_benchmark, student_benchmark
     ),
     attach_calibration_metadata(
-      wilcoxon_calibration, "calibration", selected_rfpop$null_f1,
-      rfpop_target_interval, validation_reps, validation_seed, selected,
+      wilcoxon_calibration, "calibration", null_target,
+      target_interval, validation_reps, validation_seed, selected,
       gaussian_benchmark, student_benchmark
     ),
     attach_calibration_metadata(
-      mood_calibration, "calibration", selected_rfpop$null_f1,
-      rfpop_target_interval, validation_reps, validation_seed, selected,
+      mood_calibration, "calibration", null_target,
+      target_interval, validation_reps, validation_seed, selected,
       gaussian_benchmark, student_benchmark
     ),
     attach_calibration_metadata(
-      validation, "validation", selected_rfpop$null_f1,
-      rfpop_target_interval, validation_reps, validation_seed, selected,
+      validation, "validation", null_target,
+      target_interval, validation_reps, validation_seed, selected,
       gaussian_benchmark, student_benchmark
     )
   )
-  all_scores$rfpop_target_nominal <- rfpop_target
+  all_scores$rfpop_target_nominal <- null_target
   all_scores$calibration_seed <- calibration_seed
   result <- list(
     selected = selected,
-    target_nominal = rfpop_target,
+    target_nominal = null_target,
     table = all_scores,
     gaussian_pelt_benchmark = gaussian_benchmark,
     student_pelt_benchmark = student_benchmark,

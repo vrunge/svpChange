@@ -6,13 +6,13 @@ library(changepoint)
 source(file.path("simulations", "power_common.R"))
 
 AR1_ROOT <- file.path("simulations", "power_ar1")
-AR1_N <- 600L
+AR1_N <- 1000L
 AR1_RHO <- 0.8
 AR1_TOLERANCE <- 5L
-AR1_CALIBRATION_REPS <- 1000L
-AR1_VALIDATION_REPS <- 1000L
-AR1_CALIBRATION_SEED <- 930000L
-AR1_VALIDATION_SEED <- 940000L
+AR1_CALIBRATION_REPS <- 20000L
+AR1_VALIDATION_REPS <- 10000L
+AR1_CALIBRATION_SEED <- 9300000L
+AR1_VALIDATION_SEED <- 9400000L
 AR1_NULL_TARGET <- 0.99
 
 ar1_innovation_variance <- function(rho = AR1_RHO, marginal_sd = 1) {
@@ -83,11 +83,11 @@ pelt_ar1_approximate_boundaries <- function(
 }
 
 pelt_inflated_boundaries <- function(
-    y, rho = AR1_RHO, penalty = 3 * log(length(y)) *
-      (1 + rho) / (1 - rho)) {
+    y, rho = AR1_RHO, constant = 3) {
   n <- length(y)
   fit <- changepoint::cpt.mean(
-    y, method = "PELT", penalty = "Manual", pen.value = penalty
+    y, method = "PELT", penalty = "Manual",
+    pen.value = constant * log(n) * (1 + rho) / (1 - rho)
   )
   normalise_boundaries(changepoint::cpts(fit), n)
 }
@@ -130,7 +130,7 @@ ar1_fixed_pelt_boundaries <- function(y, method, rho = AR1_RHO) {
   switch(
     method,
     "PELT AR1 approximate" = pelt_ar1_approximate_boundaries(y, rho),
-    "PELT inflated" = pelt_inflated_boundaries(y, rho),
+    "PELT inflated fixed" = pelt_inflated_boundaries(y, rho, constant = 3),
     stop("Unknown fixed AR(1) PELT method: ", method)
   )
 }
@@ -149,6 +149,9 @@ fit_ar1_calibration_candidate <- function(
     "PELT AR1 approximate" = pelt_ar1_approximate_boundaries(
       y, rho, penalty = candidate * log(n)
     ),
+    "PELT inflated calibrated" = pelt_inflated_boundaries(
+      y, rho, constant = candidate
+    ),
     "SVP AR1Focus" = svp_ar1focus_boundaries(
       y, rho, constant = candidate
     ),
@@ -158,14 +161,18 @@ fit_ar1_calibration_candidate <- function(
 
 evaluate_ar1_candidates <- function(
     candidates, method, null_series, n, rho, tolerance = AR1_TOLERANCE,
-    workers = 1L) {
+  workers = 1L) {
   score_one <- function(candidate) {
-    scores <- vapply(null_series, function(y) {
+    metrics <- vapply(null_series, function(y) {
       boundaries <- fit_ar1_calibration_candidate(
         y, method, candidate, n, rho
       )
-      ar1_null_f1(boundaries, n, tolerance)
-    }, numeric(1))
+      c(
+        null_f1 = ar1_null_f1(boundaries, n, tolerance),
+        segments = length(boundaries)
+      )
+    }, numeric(2))
+    scores <- metrics["null_f1", ]
     interval <- wilson_interval(sum(scores == 1), length(scores))
     data.frame(
       method = method,
@@ -174,13 +181,7 @@ evaluate_ar1_candidates <- function(
       null_f1_lower = interval[["lower"]],
       null_f1_upper = interval[["upper"]],
       recovered_one_segment = sum(scores == 1),
-      mean_segments = mean(vapply(
-        null_series,
-        function(y) length(fit_ar1_calibration_candidate(
-          y, method, candidate, n, rho
-        )),
-        integer(1)
-      )),
+      mean_segments = mean(metrics["segments", ]),
       reps = length(null_series),
       n = n,
       rho = rho,
@@ -221,14 +222,6 @@ evaluate_fixed_ar1_method <- function(
   )
 }
 
-select_ar1_target <- function(scores, target = AR1_NULL_TARGET) {
-  admissible <- scores[scores$null_f1 >= target, , drop = FALSE]
-  if (!nrow(admissible)) {
-    stop("AR(1) calibration grid does not attain null F1 target ", target)
-  }
-  admissible[which.min(admissible$candidate), , drop = FALSE]
-}
-
 select_ar1_closest <- function(scores, target) {
   scores[which.min(abs(scores$null_f1 - target)), , drop = FALSE]
 }
@@ -245,6 +238,9 @@ attach_ar1_metadata <- function(
     scores$method == "PELT AR1 approximate" &
       selected$approximate_constant == scores$candidate
   ) | (
+    scores$method == "PELT inflated calibrated" &
+      selected$inflated_constant == scores$candidate
+  ) | (
     scores$method == "SVP AR1Focus" &
       selected$svp_constant == scores$candidate
   )
@@ -259,9 +255,18 @@ attach_ar1_metadata <- function(
 
 ar1_method_labels <- function(calibration) {
   c(
-    "PELT AR1 approximate",
-    "PELT inflated",
-    "DeCAFS AR1",
+    paste0(
+      "PELT AR1 approximate / c = ",
+      formatC(calibration$selected$approximate_constant, digits = 3L, format = "f")
+    ),
+    paste0(
+      "PELT inflated calibrated / c = ",
+      formatC(calibration$selected$inflated_constant, digits = 3L, format = "f")
+    ),
+    paste0(
+      "DeCAFS AR1 / c = ",
+      formatC(calibration$selected$decafs_constant, digits = 3L, format = "f")
+    ),
     paste0(
       "SVP AR1Focus + AR1 cost / right / c = ",
       formatC(calibration$selected$svp_constant, digits = 3L, format = "f")
@@ -276,9 +281,10 @@ run_ar1_calibration <- function(
     validation_reps = AR1_VALIDATION_REPS,
     calibration_seed = AR1_CALIBRATION_SEED,
     validation_seed = AR1_VALIDATION_SEED,
-    decafs_grid = seq(1, 8, 0.25),
-    approximate_grid = seq(0.5, 4, 0.05),
-    svp_grid = seq(1, 8, 0.05),
+    decafs_grid = seq(2.35, 2.55, 0.01),
+    approximate_grid = seq(0.70, 0.77, 0.005),
+    inflated_grid = seq(1.50, 2.00, 0.005),
+    svp_grid = seq(3.40, 3.76, 0.01),
     workers = 1L,
     write_outputs = TRUE) {
   require_decafs()
@@ -292,16 +298,22 @@ run_ar1_calibration <- function(
     approximate_grid, "PELT AR1 approximate", calibration_null, n, rho,
     workers = workers
   )
+  inflated_scores <- evaluate_ar1_candidates(
+    inflated_grid, "PELT inflated calibrated", calibration_null, n, rho,
+    workers = workers
+  )
   svp_scores <- evaluate_ar1_candidates(
     svp_grid, "SVP AR1Focus", calibration_null, n, rho, workers = workers
   )
-  selected_decafs <- select_ar1_target(decafs_scores)
-  target_f1 <- selected_decafs$null_f1
+  target_f1 <- AR1_NULL_TARGET
+  selected_decafs <- select_ar1_closest(decafs_scores, target_f1)
   selected_approximate <- select_ar1_closest(approximate_scores, target_f1)
+  selected_inflated <- select_ar1_closest(inflated_scores, target_f1)
   selected_svp <- select_ar1_closest(svp_scores, target_f1)
   selected <- list(
     decafs_constant = selected_decafs$candidate,
     approximate_constant = selected_approximate$candidate,
+    inflated_constant = selected_inflated$candidate,
     svp_constant = selected_svp$candidate,
     target_f1 = target_f1,
     target_f1_lower = selected_decafs$null_f1_lower,
@@ -327,11 +339,15 @@ run_ar1_calibration <- function(
       validation_null, n, rho, workers = workers
     ),
     evaluate_ar1_candidates(
+      selected_inflated$candidate, "PELT inflated calibrated",
+      validation_null, n, rho, workers = workers
+    ),
+    evaluate_ar1_candidates(
       selected_svp$candidate, "SVP AR1Focus", validation_null, n, rho,
       workers = workers
     ),
     evaluate_fixed_ar1_method(
-      "PELT inflated", validation_null, n, rho, validation_seed
+      "PELT inflated fixed", validation_null, n, rho, validation_seed
     )
   )
   calibration_table <- dplyr::bind_rows(
@@ -344,6 +360,10 @@ run_ar1_calibration <- function(
       calibration_reps, validation_reps, calibration_seed, validation_seed
     ),
     attach_ar1_metadata(
+      inflated_scores, "calibration", target_f1, selected,
+      calibration_reps, validation_reps, calibration_seed, validation_seed
+    ),
+    attach_ar1_metadata(
       svp_scores, "calibration", target_f1, selected,
       calibration_reps, validation_reps, calibration_seed, validation_seed
     ),
@@ -352,7 +372,7 @@ run_ar1_calibration <- function(
       calibration_reps, validation_reps, calibration_seed, validation_seed
     ),
     evaluate_fixed_ar1_method(
-      "PELT inflated", calibration_null, n, rho, calibration_seed
+      "PELT inflated fixed", calibration_null, n, rho, calibration_seed
     )
   )
   calibration_table$target_nominal <- AR1_NULL_TARGET
@@ -365,13 +385,17 @@ run_ar1_calibration <- function(
     candidate_tables = list(
       decafs = decafs_scores,
       approximate = approximate_scores,
+      inflated = inflated_scores,
       svp = svp_scores
     ),
     table = calibration_table,
     validation = validation,
     fixed_pelt = list(
-      approximate = list(constant = 2.2),
-      inflated = list(constant = 3, inflation = (1 + rho) / (1 - rho))
+      inflated = list(constant = 3, inflation = (1 + rho) / (1 - rho)),
+      inflated_calibrated = list(
+        constant = selected$inflated_constant,
+        inflation = (1 + rho) / (1 - rho)
+      )
     )
   )
   if (write_outputs) {
@@ -383,16 +407,22 @@ run_ar1_calibration <- function(
       row.names = FALSE
     )
     utils::write.csv(
-      dplyr::bind_rows(decafs_scores, approximate_scores, svp_scores),
+      dplyr::bind_rows(
+        decafs_scores, approximate_scores, inflated_scores, svp_scores
+      ),
       file.path(AR1_ROOT, "ar1_null_calibration.csv"),
       row.names = FALSE
     )
     utils::write.csv(
       data.frame(
-        method = c("DeCAFS AR1", "PELT AR1 approximate", "SVP AR1Focus"),
+        method = c(
+          "DeCAFS AR1", "PELT AR1 approximate",
+          "PELT inflated calibrated", "SVP AR1Focus"
+        ),
         parameter = c(
           selected$decafs_constant,
           selected$approximate_constant,
+          selected$inflated_constant,
           selected$svp_constant
         ),
         target_f1 = target_f1,

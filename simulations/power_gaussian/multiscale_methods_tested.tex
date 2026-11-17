@@ -1,0 +1,436 @@
+\documentclass[11pt]{article}
+\usepackage[margin=2.7cm]{geometry}
+\usepackage{amsmath,amssymb,booktabs,url}
+\setlength{\parindent}{0pt}
+\setlength{\parskip}{0.6\baselineskip}
+\sloppy
+
+\newcommand{\C}{\mathcal{C}}
+
+\begin{document}
+
+\begin{center}
+{\large\bfseries Multiscale validity tests explored for \texttt{f1\_four\_methods.pdf}}
+\end{center}
+
+Figure \texttt{f1\_four\_methods.pdf} compares eleven change-point
+detection methods on independent Gaussian data, all calibrated to a $1\%$
+null false-positive rate at $n=1000$ observations (PELT and the ten SVP
+variants all target the same rate, so their detection power is directly
+comparable). Notation throughout follows the SVP framework of
+\cite{runge2026svp} (Chapter~4, ``Smallest Valid Partitioning''): a
+segment $y_{a..b}$ denotes the consecutive points $y_{a+1},\dots,y_b$, and
+for $a<b$,
+\[
+\C^{\text{Gauss}}(y_{a..b}) \;=\; \sum_{i=a+1}^{b}\bigl(y_i-\overline{y}_{a..b}\bigr)^2,
+\qquad \overline{y}_{a..b}=\frac{1}{b-a}\sum_{i=a+1}^{b}y_i,
+\]
+is the Gaussian segment cost (residual sum of squares, on the scale with
+the customary $1/2$ factor removed, matching \cite{runge2026svp}'s own
+convention). For $s<\tau<t$,
+\[
+f_{\mathrm{Gauss}}(y_{s..t})
+= 2f_{\mathrm{LR}}(y_{s..t})
+= \max_{s<\tau<t}\Bigl\{\C^{\text{Gauss}}(y_{s..t})-\C^{\text{Gauss}}(y_{s..\tau})-\C^{\text{Gauss}}(y_{\tau..t})\Bigr\}
+\]
+is the single-anchored Gaussian generalized-likelihood-ratio statistic
+(start $s$ and end $t$ fixed, maximized only over the internal split
+$\tau$): twice the log-likelihood-ratio for one versus two segments on
+$(s,t]$, and the Gaussian specialization of the cost-based validity test
+$f_{OP}(y_{a..b})=\max_{a<u<b}\{\C(y_{a..b})-\C(y_{a..u})-\C(y_{u..b})\}$
+of \cite{runge2026svp} (\S``Link to the OP method''). Following the same
+construction, write $\Delta(a,u,b)$ -- a local shorthand for this
+document, not a symbol used in \cite{runge2026svp} itself -- for the
+bracket inside that maximum at one specific, unmaximized split $a<u<b$,
+\[
+\Delta(a,u,b) \;=\; \C^{\text{Gauss}}(y_{a..b})-\C^{\text{Gauss}}(y_{a..u})-\C^{\text{Gauss}}(y_{u..b}),
+\]
+so that $f_{\mathrm{Gauss}}(y_{s..t})=\max_{s<u<t}\Delta(s,u,t)$. It is
+also useful to recall the multiscale aggregates of \cite{runge2026svp}
+built from any single-change test $f$,
+\[
+F_{\mathrm{right}}(y_{s..t})=\max_{s<\tau\le t}f(y_{s..\tau}),\quad
+F_{\mathrm{left}}(y_{s..t})=\max_{s\le \tau<t}f(y_{\tau..t}),\quad
+F_{\mathrm{both}}(y_{s..t})=\max_{s\le \tau_1<\tau_2\le t}f(y_{\tau_1..\tau_2}),
+\]
+which are, respectively, $\gamma$-stable, $\gamma^{-1}$-stable, and both
+-- the property that makes discard-on-failure (\texttt{"right"}) and
+inclusive left-pruning (\texttt{"both"}) pruning exact \emph{when the
+validity test itself is} $F_{\mathrm{right}}$ or $F_{\mathrm{both}}$.
+$n$ denotes the total series length and $\ell=t-s$ a candidate segment's
+own length. All ten SVP variants search for the partition with the
+\emph{fewest} segments passing their validity test, breaking ties by
+minimal total within-segment sum of squared errors.
+
+\section*{1. The six methods in \texttt{f1\_six\_methods.pdf}}
+
+The three fixed baselines (PELT, SVP both, SVP SMUCE) plus the three
+best-performing \texttt{"both"}-family variants, selected by mean F1
+across all scenarios and jump sizes (and, separately, restricted to the
+harder jump $\le1.0$ regime -- both rankings agree): \texttt{both\_rmin},
+\texttt{both\_correction}, and \texttt{both\_mosum}. These six are
+collected on their own in \texttt{f1\_six\_methods.pdf}; the remaining
+five variants (\S2) are shown only in the full \texttt{f1\_four\_methods.pdf}.
+
+\begin{itemize}
+
+\item \textbf{PELT.} Exact minimizer of a penalized Gaussian cost,
+\[
+\min_{m,\,\tau_1<\dots<\tau_m}\ \sum_{i=0}^{m}\C^{\text{Gauss}}(y_{\tau_i..\tau_{i+1}})
+\;+\;\beta m,
+\qquad \tau_0=0,\ \tau_{m+1}=n,\ \beta=c\log n,
+\]
+solved exactly by the pruned dynamic program of \cite{killick2012}, and
+matching \cite{runge2026svp}'s own $Q_n(\tau;y)+\gamma K_n(\tau)$
+objective (no $1/2$ factor, as above); $f_{\mathrm{Gauss}}(y_{s..t})$ is
+exactly the drop in this same cost from optimally splitting $(s,t]$ once.
+\emph{Calibration:} $c$ found by simulation so PELT itself reaches a $1\%$
+null FPR at $n=1000$ (not the usual BIC-style $c=1$ or $2$), for a fair
+comparison against the SVP variants. \emph{Reference:}
+\cite{killick2012}.
+
+\item \textbf{SVP both.} Smallest partition with every segment
+$(s,t]$ satisfying
+\[
+f_{\mathrm{Gauss}}(y_{s..t}) \;\le\; c\log n.
+\]
+\emph{Calibration:} $c$ found by simulation to a $1\%$ null FPR under
+\texttt{"both"} pruning (discard a candidate on failure, plus inclusive
+left-pruning of older candidates sharing the same endpoint) -- applied as
+a heuristic shortcut to the raw, single-anchored $f_{\mathrm{Gauss}}$, not
+to $F_{\mathrm{both}}$ itself.
+\emph{Reference:} the FOCUS statistic and the
+\texttt{"both"}/\texttt{"right"}/\texttt{"none"} functional-pruning rules
+are from \cite{romano2023}; the SVP smallest-valid-partition search and
+the $F_{\mathrm{right}}/F_{\mathrm{left}}/F_{\mathrm{both}}$ framework are
+from \cite{runge2026svp}.
+
+\item \textbf{SVP SMUCE.} Smallest partition with every segment $(s,t]$
+of length $\ell$ satisfying: there exists $\theta$ such that every
+sub-window $(s',t']\subseteq(s,t]$ of length $\ell'$ obeys
+\[
+\bigl|\overline{y}_{s'..t'}-\theta\bigr| \;\le\;
+\frac{1}{\sqrt{\ell'}}\Bigl(q+\sqrt{2\bigl(1+\log(n/\ell')\bigr)}\Bigr).
+\]
+\emph{Calibration:} $q$ found by simulation to a $1\%$ null FPR.
+\emph{Reference:} the multiscale constraint (SMUCE) is from
+\cite{frick2014}; \cite{runge2026svp} notes $F_{\mathrm{both}}$, evaluated
+with a fixed-scale validity test $f$, is precisely the multiscale
+statistic underlying SMUCE.
+
+\item \textbf{SVP both\_rmin.} $f_{\mathrm{Gauss}}$'s inner maximum
+restricted to splits whose shorter arm exceeds a minimum length,
+\[
+\max_{\tau:\,r_\tau\ge r_{\min}} \Delta(s,\tau,t) \;\le\; \gamma.
+\]
+\emph{Calibration:} grid search over $r_{\min}$, then $\gamma$ bisected to
+a $1\%$ null FPR at each ($r_{\min}=30$, $\gamma=25.313$) -- again
+dispatched via the \texttt{"both"}-pruning heuristic on this restricted
+raw $f_{\mathrm{Gauss}}$, not on an $F_{\mathrm{both}}$ aggregate of it.
+\emph{Reference:} none found; an internal \texttt{svpChange}
+design choice.
+
+\item \textbf{SVP both\_correction.} Every sub-interval $[a,b]\subseteq[s,t]$
+tested, at every internal split $u$, against a length-corrected penalty --
+the same double-max family as $F_{\mathrm{both}}$, but with the penalty
+applied \emph{before} maximizing over $u$, so the unmaximized $\Delta$ is
+needed rather than $f_{\mathrm{Gauss}}$ itself:
+\[
+\max_{s\le a<u<b\le t}\Bigl\{\sqrt{\Delta(a,u,b)} - p_n(u-a,\,b-u)\Bigr\} \;\le\; q,
+\qquad p_n(l,r)=\sqrt{2\log\!\bigl(n(l+r)/(lr)\bigr)}.
+\]
+\emph{Calibration:} $q=2.623$ found by simulation to a $1\%$ null FPR.
+\emph{Reference:} \texttt{SVP\_consistency\_sharp.tex} (unpublished draft);
+the penalty $p_n$ is derived from the simultaneous multiscale CUSUM bound
+of \cite{verzelen2020}.
+
+\item \textbf{SVP both\_mosum.} The single-anchored statistic evaluated
+at a single, fixed split -- the candidate's own midpoint -- instead of
+maximized over every internal split as $f_{\mathrm{Gauss}}$ is: for a
+candidate of current length $\ell$, with $\tau_{\mathrm{mid}}=s+\lfloor
+\ell/2\rfloor$,
+\[
+\Delta(s,\tau_{\mathrm{mid}},t) \;\le\; \gamma,
+\qquad \text{segments with } \ell<20 \text{ always valid}.
+\]
+Unlike every other method here, no maximum over $\tau$ is taken at all --
+a single two-sample comparison per candidate, at $O(1)$ cost instead of
+the $O(\ell)$ or worse scans used elsewhere in this document -- and
+segments shorter than $20$ are declared valid unconditionally (a hard
+floor, not an asymptotic one: below that length a single fixed midpoint
+split leaves too few points on one side to be informative).
+\emph{No multiscale penalty:} unlike every other method in this document,
+$\gamma$ does not depend on $\ell$. This is not an oversight: because no
+maximum over $\tau$ is taken, $\Delta(s,\tau_{\mathrm{mid}},t)$ is
+\emph{exactly} $\chi^2_1$-distributed at every length $\ell$ (verified by
+simulation: mean $\approx1$ at $\ell=20,\dots,1000$), unlike
+$f_{\mathrm{Gauss}}$, whose own maximum over $\sim\ell$ positions makes its
+null distribution grow like $2\log\ell$ -- the very reason
+\texttt{both\_calibrated}, \texttt{both\_lengthonly}, and
+\texttt{both\_mosum\_sqrt} all need a length-adaptive threshold. A flat $\gamma$
+is therefore the right \emph{shape} here. A large multiplicity still has
+to be absorbed, though: testing the same candidate at every length it
+survives under \texttt{"both"} pruning means a single test's marginal
+exceedance probability at $\gamma=23.32$ ($\chi^2_1$'s tail,
+$1.4\times10^{-6}$) is far below the realized $1\%$ aggregate FPR -- an
+implied effective $K\approx7300$ tests, all absorbed by the one calibrated
+constant rather than any parametric union-bound formula.
+\emph{Calibration:} $\gamma=23.32$, a flat threshold found by directly
+bisecting the empirical null rate to $1\%$ under \texttt{"both"} pruning
+(true FPR $0.96\%$ at $8000$ replicates) -- the same heuristic shortcut on
+this raw statistic as every other method here. \emph{Power:} F1 at jump
+$0.6$ on \texttt{updown} is $0.109$, on par with the $f_{\mathrm{Gauss}}$-based
+methods ($0.07$--$0.13$) despite testing only one split per candidate
+instead of maximizing over all of them: because no maximum over $\tau$ is
+taken, this statistic needs no correction for scanning multiple splits
+within a candidate (unlike $f_{\mathrm{Gauss}}$, whose own internal
+maximization already inflates its null distribution), so the threshold
+this test needs is comparatively mild, recovering most of the power the
+internal split-search would otherwise have bought. \emph{Reference:} none
+found; an internal \texttt{svpChange} design choice.
+
+\end{itemize}
+
+\section*{2. Five further variants (also in \texttt{f1\_four\_methods.pdf})}
+
+Shown only in the full figure, not in \texttt{f1\_six\_methods.pdf}: three
+further ways of recalibrating or restructuring the methods above
+(\texttt{both\_calibrated Bonferroni}, \texttt{both\_empirical},
+\texttt{both\_lengthonly}), and two statistics that replace
+$f_{\mathrm{Gauss}}$ itself (\texttt{both\_mosum\_sqrt},
+\texttt{both\_mosum\_adaptive}).
+
+\begin{itemize}
+
+\item \textbf{SVP both\_calibrated Bonferroni.} $f_{\mathrm{Gauss}}$
+thresholded at each candidate's own current length $\ell$,
+\[
+f_{\mathrm{Gauss}}(y_{s..t}) \;\le\; A\log\ell + B\log\log\ell + C.
+\]
+\emph{Calibration:} $(A,B)=(1.683,\,6.209)$ are the original fitted
+values, held fixed; $C=15.5$ (up from the original fit's $4.939$) is found
+by directly bisecting the empirical null rate to $1\%$ -- dispatched via
+the same \texttt{"both"}-pruning heuristic on raw $f_{\mathrm{Gauss}}$ as
+plain \texttt{"both"}, not on its $F_{\mathrm{both}}$ aggregate.
+\emph{Reference:} motivated by the union-bound principle of the classical
+Bonferroni correction \cite{bonferroni1936}; the specific value of $C$ is
+found empirically, with no external reference for that step.
+
+\item \textbf{SVP both\_empirical.} No parametric formula: a simulated,
+time-varying threshold on $F_{\mathrm{both}}$, the TRUE aggregate
+\texttt{"both"} statistic (start fixed at $0$),
+\[
+F_t \;>\; E_t + c\sqrt{V_t},
+\qquad F_t = F_{\mathrm{both}}(y_{0..t}) = \max_{0\le a<b\le t} f_{\mathrm{Gauss}}(y_{a..b}),
+\]
+the running maximum, over every sub-segment of the first $t$ observations,
+of $f_{\mathrm{Gauss}}$ -- the statistic \cite{runge2026svp} proves is
+exactly $\gamma$- and $\gamma^{-1}$-stable, matching what \texttt{"both"}
+pruning's exactness requires. At runtime each candidate still
+compares its own raw $f_{\mathrm{Gauss}}(y_{s..t})$ against the shared
+$\gamma(t)=E_t+c\sqrt{V_t}$ (the same heuristic shortcut as every other
+\texttt{"both"}-pruned method here), but this is the one method whose
+\emph{threshold} is calibrated directly against $F_{\mathrm{both}}$'s own
+simulated distribution, rather than by bisecting the real dispatched
+algorithm's FPR blind to that distinction. \emph{Calibration:} $E_t,V_t$
+(per-length mean and variance of $F_{\mathrm{both}}(y_{0..t})$, obtained
+by a running cummax of the per-length $F_{\mathrm{left}}$ trajectory,
+since $F_{\mathrm{both}}(y_{0..t})=\max_{t'\le t}F_{\mathrm{left}}(y_{0..t'})$)
+and $c$ (the joint running-maximum quantile) all estimated empirically
+from $20{,}000$ null trajectories ($c=5.187$). \emph{Reference:}
+$F_{\mathrm{both}}$ is from \cite{runge2026svp}; the empirical threshold
+construction is original to this document.
+
+\item \textbf{SVP both\_lengthonly.} $f_{\mathrm{Gauss}}$ thresholded by a
+length-only multiscale correction, depending on the candidate's own
+current length $\ell$ but not on the split point:
+\[
+f_{\mathrm{Gauss}}(y_{s..t}) \;\le\; \Bigl[q+\sqrt{2\log(en/\ell)}\Bigr]^2.
+\]
+\emph{Calibration:} $q=3.30$ found by directly bisecting the empirical
+null rate to a $1\%$ FPR under \texttt{"both"} pruning -- the same
+heuristic shortcut on raw $f_{\mathrm{Gauss}}$ as every other
+\texttt{"both"}-pruned method here. Unlike the original proposal, every
+length $\ell$ is scanned (no declared length subset) and a single shared
+$q$ is used (no per-length optimization). \emph{Reference:} the
+$\sqrt{2\log(en/\ell)}$ multiscale correction follows the principle of
+\cite{dumbgen2001} and its change-point form, SMUCE, in \cite{frick2014};
+the length-adaptive threshold itself is the
+\texttt{SVP\_validity\_rules.tex} proposal (unpublished draft,
+V.~Runge).
+
+\item \textbf{SVP both\_mosum\_sqrt.} Replaces $f_{\mathrm{Gauss}}$ with a
+moving-sum (MOSUM) statistic at bandwidth $G$: for a candidate of current
+length $\ell$,
+\[
+T_k(G) \;=\; \frac{1}{\sqrt{2G\sigma^2}}\Biggl(\sum_{i=k+1}^{k+G}y_i-\sum_{i=k-G+1}^{k}y_i\Biggr),
+\qquad G\le k\le \ell-G,
+\]
+compares the mean of the $G$ points to the right of $k$ against the mean
+of the $G$ points to the left -- a fixed-width local two-sample test,
+unlike $f_{\mathrm{Gauss}}$'s split-optimized comparison. The multiscale
+penalty accounting for the candidate's own length $\ell$ is the exact
+asymptotic boundary of \cite{eichinger2018}, Theorem~2.1: with
+$G=G(\ell)=\max(2,\lfloor\sqrt\ell\rfloor)$ (satisfying their rate
+condition $\ell/G\to\infty$) and $x=\ell/G$,
+\[
+a(x)=\sqrt{2\log x},\qquad
+b(x)=2\log x+\tfrac12\log\log x+\log\tfrac32-\tfrac12\log\pi,
+\]
+\[
+\max_{G\le k\le \ell-G}T_k(G)^2 \;\le\;
+\left[\frac{b(x)+q_\alpha}{a(x)}\right]^2,
+\qquad q_\alpha=-\log\!\Bigl(-\tfrac12\log(1-\alpha)\Bigr),
+\]
+the $(1-\alpha)$-quantile of the Gumbel limit
+$a(n/G)\max_k|T_k(G)|-b(n/G)\xrightarrow{\mathcal D}\Gamma$,
+$P(\Gamma\le x)=\exp(-2\exp(-x))$, with the total series length $n$
+replaced by the candidate's own $\ell$ to make the threshold length-adaptive.
+\emph{Calibration:} at $\gamma=0$ (the bare theoretical boundary, $\alpha=1\%$)
+the empirical null FPR is already $1.4\%$, validating the asymptotic
+derivation; a single additive correction $\gamma=1.625$, found by directly
+bisecting the empirical null rate (same convention as
+\texttt{both\_calibrated}: $\gamma$ shifts the squared statistic minus the
+theoretical boundary), gives a true $1\%$ FPR ($0.76\%$ at $8000$
+replicates) -- dispatched via the same \texttt{"both"}-pruning heuristic
+on this raw statistic as every other method here. \emph{Power:}
+substantially below every other method at small and moderate jump sizes
+(F1 at jump $0.6$ on \texttt{updown} is $0.015$, versus $0.07$--$0.13$ for
+the $f_{\mathrm{Gauss}}$-based methods), closing the gap only at large
+jumps; this is a real property of the fixed-bandwidth MOSUM scan, not a
+calibration artifact -- $T_k(G)$ compares two length-$G$ windows without
+optimizing the split location the way $f_{\mathrm{Gauss}}$ does, so it is
+mismatched whenever the true change does not fall near a well-covered $k$,
+or $G$ is far from the true arm lengths. \emph{Reference:} the use of
+MOSUM statistics for testing the i.i.d.\ multiple-change hypothesis is
+from \cite{huskova2001}; the exact multiscale boundary used here is
+\cite{eichinger2018}, Theorem~2.1.
+
+\item \textbf{SVP both\_mosum\_adaptive.} The length-adaptive version
+of \texttt{both\_mosum}: the raw statistic
+$\Delta(s,\tau_{\mathrm{mid}},t)$ is unchanged (still a single, fixed
+midpoint comparison), but the flat $\gamma$ is replaced by a
+length-dependent threshold motivated as follows. Unlike
+$f_{\mathrm{Gauss}}$'s own running maximum, which is non-stationary and
+needs a single-log, Darling-Erd\H{o}s-type boundary
+$\sqrt{2\log\ell}$ (the shape underlying
+\texttt{both\_calibrated}/\texttt{both\_lengthonly}/\texttt{both\_mosum\_sqrt}),
+the signed midpoint statistic $Z_{\mathrm{mid}}(\ell)$ is \emph{already
+stationary} after a log-time change: its correlation across two lengths
+$\ell<\ell'$ depends only on the ratio $r=\ell'/\ell$,
+\[
+\mathrm{Corr}\bigl(Z_{\mathrm{mid}}(\ell),Z_{\mathrm{mid}}(\ell')\bigr)
+=\begin{cases}(2-r)/\sqrt{r}, & 1\le r<2,\\ 0, & r\ge2,\end{cases}
+\]
+a compactly supported correlation (derived from the Brownian-motion
+limit, confirmed by simulation to within $0.01$). Controlling the running
+maximum of such a stationary, short-range-dependent process under
+\emph{repeated testing as the sample size grows} is the classical setting
+of the law-of-the-iterated-logarithm literature on repeated significance
+tests (\cite{darling1956}'s general boundary-crossing theorem;
+\cite{darlingrobbins1967} on sequential/repeated significance testing),
+which gives a much \emph{gentler}, double-log threshold growth than the
+single-log corrections above. This motivates
+\[
+\Delta(s,\tau_{\mathrm{mid}},t) \;\le\;
+\Bigl[q+\sqrt{2\log\bigl(\log(\ell/20)+e\bigr)}\Bigr]^2,
+\]
+(the ``$+e$'' keeps the inner argument $\ge1$ at $\ell=20$, avoiding
+$\log(0)$). As with \texttt{both\_lengthonly} and \texttt{both\_mosum\_sqrt},
+the exact extremal constant for this specific compactly-supported
+correlation structure is not derived here in closed form; only the
+general double-log \emph{shape} is taken from the theory, with $q$
+calibrated empirically. \emph{Calibration:} $q=3.304$, found by directly
+bisecting the empirical null rate to $1\%$ (true FPR $0.84\%$ at $8000$
+replicates). \emph{Power:} F1 at jump $0.6$ on \texttt{updown} is
+$0.102$, essentially unchanged from (very slightly below)
+\texttt{both\_mosum}'s flat-threshold $0.109$: the length-adaptive
+threshold is more liberal at short $\ell$ and more conservative at long
+$\ell$ than the flat one ($22.3$ vs.\ $23.3$ at $\ell=20$; $27.6$ vs.\
+$23.3$ at $\ell=1000$), and on \texttt{updown} this redistribution is
+roughly power-neutral. \emph{Reference:} the general boundary-crossing
+theorem is \cite{darling1956}; the repeated-significance-testing
+framework motivating the double-log shape is
+\cite{darlingrobbins1967}; the specific threshold formula and the
+compactly-supported correlation derivation are original to this
+document.
+
+\end{itemize}
+
+\begin{thebibliography}{9}
+
+\bibitem{bonferroni1936}
+C.~E.~Bonferroni.
+\newblock Teoria statistica delle classi e calcolo delle probabilit\`a.
+\newblock \emph{Pubblicazioni del R.~Istituto Superiore di Scienze
+Economiche e Commerciali di Firenze}, 8:3--62, 1936.
+
+\bibitem{darling1956}
+D.~A.~Darling and P.~Erd\H{o}s.
+\newblock A limit theorem for the maximum of normalized sums of
+independent random variables.
+\newblock \emph{Duke Mathematical Journal}, 23(1):143--155, 1956.
+
+\bibitem{darlingrobbins1967}
+D.~A.~Darling and H.~Robbins.
+\newblock Iterated logarithm inequalities.
+\newblock \emph{Proceedings of the National Academy of Sciences},
+57(5):1188--1192, 1967.
+
+\bibitem{dumbgen2001}
+L.~D\"umbgen and V.~G.~Spokoiny.
+\newblock Multiscale testing of qualitative hypotheses.
+\newblock \emph{The Annals of Statistics}, 29(1):124--152, 2001.
+\newblock \url{https://doi.org/10.1214/aos/996986504}.
+
+\bibitem{eichinger2018}
+B.~Eichinger and C.~Kirch.
+\newblock A MOSUM procedure for the estimation of multiple random change
+points.
+\newblock \emph{Bernoulli}, 24(1):526--564, 2018.
+\newblock \url{https://doi.org/10.3150/16-BEJ887}.
+
+\bibitem{frick2014}
+K.~Frick, A.~Munk and H.~Sieling.
+\newblock Multiscale change point inference.
+\newblock \emph{Journal of the Royal Statistical Society: Series B},
+76(3):495--580, 2014.
+\newblock \url{https://doi.org/10.1111/rssb.12047}.
+
+\bibitem{huskova2001}
+M.~Hu\v{s}kov\'a and A.~Slab\'y.
+\newblock Permutation tests for multiple changes.
+\newblock \emph{Kybernetika (Prague)}, 37(5):605--622, 2001.
+
+\bibitem{killick2012}
+R.~Killick, P.~Fearnhead and I.~A.~Eckley.
+\newblock Optimal detection of changepoints with a linear computational cost.
+\newblock \emph{Journal of the American Statistical Association},
+107(500):1590--1598, 2012.
+\newblock \url{https://doi.org/10.1080/01621459.2012.737745}.
+
+\bibitem{romano2023}
+G.~Romano, I.~A.~Eckley, P.~Fearnhead and G.~Rigaill.
+\newblock Fast online changepoint detection via functional pruning CUSUM
+statistics.
+\newblock \emph{Journal of Machine Learning Research}, 24(81):1--36, 2023.
+\newblock \url{https://www.jmlr.org/papers/v24/21-1230.html}.
+
+\bibitem{runge2026svp}
+V.~Runge, A.~Kostic, A.~Combeau and G.~Romano.
+\newblock Exact multiple change-point detection via smallest valid
+partitioning.
+\newblock arXiv:2602.04322 [stat.ME], 2026.
+\newblock \url{https://arxiv.org/abs/2602.04322}.
+
+\bibitem{verzelen2020}
+N.~Verzelen, M.~Fromont, M.~Lerasle and P.~Reynaud-Bouret.
+\newblock Optimal change-point detection and localization.
+\newblock \emph{Annals of Statistics}, 51(4):1586--1610, 2023.
+\newblock \url{https://doi.org/10.1214/23-AOS2297}.
+\newblock Detailed statements and proofs cited here use arXiv:2010.11470v2,
+2020, \url{https://arxiv.org/abs/2010.11470v2}.
+
+\end{thebibliography}
+
+\end{document}

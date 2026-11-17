@@ -16,8 +16,10 @@ power_lapply <- function(X, FUN, workers = power_default_workers(), ...) {
   if (workers == 1L || .Platform$OS.type == "windows") {
     return(lapply(X, FUN, ...))
   }
+  # Simulation tasks set their seeds explicitly; prescheduling avoids a fork
+  # for every replicate while preserving the generated samples.
   parallel::mclapply(
-    X, FUN, ..., mc.cores = workers, mc.preschedule = FALSE,
+    X, FUN, ..., mc.cores = workers, mc.preschedule = TRUE,
     mc.set.seed = FALSE
   )
 }

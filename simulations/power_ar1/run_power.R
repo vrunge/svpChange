@@ -8,7 +8,7 @@ library(ggplot2)
 source(file.path("simulations", "power_ar1", "calibrate_ar1.R"))
 
 AR1_ROOT <- file.path("simulations", "power_ar1")
-AR1_JUMP_SIZES <- seq(1, 5, 0.2)
+AR1_JUMP_SIZES <- seq(0.1, 4, 0.1)
 AR1_REPS <- 100L
 
 fit_ar1_methods <- function(y, rho = AR1_RHO, calibration) {
@@ -25,7 +25,9 @@ fit_ar1_methods <- function(y, rho = AR1_RHO, calibration) {
     pelt_ar1_approximate_boundaries(
       y, rho, penalty = selected$approximate_constant * log(n)
     ),
-    pelt_inflated_boundaries(y, rho),
+    pelt_inflated_boundaries(
+      y, rho, constant = selected$inflated_constant
+    ),
     decafs_ar1_boundaries(
       y, rho, penalty = selected$decafs_constant * log(n)
     ),
@@ -42,7 +44,7 @@ run_ar1_power <- function(
     jump_sizes = AR1_JUMP_SIZES,
     reps = AR1_REPS,
     workers = power_default_workers(),
-    seed = 123L,
+    seed = 3391847L,
     calibration = NULL) {
   require_decafs()
   if (is.null(calibration)) {

@@ -1,0 +1,2 @@
+"q","target_fpr","calibration_false_detections","calibration_fpr","calibration_lower","calibration_upper","calibration_reps","calibration_seed","validation_false_detections","validation_fpr","validation_lower","validation_upper","validation_reps","validation_seed","n","sigma2","statistic"
+3.2847837919349,0.01,200,0.01,0.00871206607361829,0.0114761292613642,20000,41000000,79,0.0079,0.0063438782687797,0.00983405292764021,10000,51000000,1000,1,"max over intervals and splits of abs(Z)/sigma - sqrt(2 log(e length / shorter_side))"

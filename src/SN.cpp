@@ -54,7 +54,7 @@ List SN(std::vector<double> data, int Kmax)
   IntegerMatrix lastChange(n + 1, Kmax); // argmin s for (t,k), store s (0..t-1)
 
   // Initialize with +inf
-  for (int t = 0; t < n + 1; t++)
+  for (size_t t = 0; t < n + 1; t++)
     for (int k = 0; k < Kmax; k++)
     {
       costQ(t, k) = std::numeric_limits<double>::infinity();
@@ -75,7 +75,7 @@ List SN(std::vector<double> data, int Kmax)
   }
 
   // base case K = 1
-  for (int t = 1; t < n + 1; t++)
+  for (size_t t = 1; t < n + 1; t++)
   {
     costQ(t, 0) = S2[t] - S1[t] * S1[t] / t;
     lastChange(t, 0) = 0;
@@ -136,7 +136,6 @@ List SN(std::vector<double> data, int Kmax)
     Named("nb") = R_NilValue,
     Named("costQ") = costQ);
 }
-
 
 
 

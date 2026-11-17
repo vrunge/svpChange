@@ -1,0 +1,2 @@
+"gamma","target_fpr","calibration_false_detections","calibration_fpr","calibration_lower","calibration_upper","calibration_reps","calibration_seed","validation_false_detections","validation_fpr","validation_lower","validation_upper","validation_reps","validation_seed","n","sigma2","statistic"
+1.3983025932042,0.01,200,0.01,0.00871206607361829,0.0114761292613642,20000,11100000,78,0.0078,0.00625477582918248,0.00972323216691155,10000,12100000,1000,1,"minimum gamma making the full-series SMUCE constraint feasible"

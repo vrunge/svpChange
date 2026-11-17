@@ -81,7 +81,7 @@ public:
           candidate.boundary +
         right_sum * right_sum / right_length -
         total_cost;
-      if (!std::isfinite(cost) || cost >= threshold) return true;
+      if (!std::isfinite(cost) || cost > threshold) return true;
     }
     return false;
   }

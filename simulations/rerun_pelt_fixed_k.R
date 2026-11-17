@@ -122,7 +122,7 @@ save_rerun_ar1_outputs <- function(target_seconds = 0.05) {
   summaries <- plot_paper_time_study(
     ar1,
     root = "simulations/time_ar1",
-    paper_root = normalizePath(file.path("..", "SVP_NEW_Figures2"),
+    paper_root = normalizePath(file.path("simulations", "all_plots"),
                                mustWork = FALSE),
     prefix = "ar1_time",
     paper_prefix = "2_ar1",
@@ -162,7 +162,7 @@ save_rerun_outputs <- function() {
   source(file.path("simulations", "time_gaussian", "run_time.R"))
   plot_gaussian_paper_time(
     gaussian,
-    normalizePath(file.path("..", "SVP_NEW_Figures2"), mustWork = FALSE),
+    normalizePath(file.path("simulations", "all_plots"), mustWork = FALSE),
     "gaussian_time"
   )
 
@@ -181,7 +181,7 @@ save_rerun_outputs <- function() {
   summaries <- plot_paper_time_study(
     ar1,
     root = "simulations/time_ar1",
-    paper_root = normalizePath(file.path("..", "SVP_NEW_Figures2"),
+    paper_root = normalizePath(file.path("simulations", "all_plots"),
                                mustWork = FALSE),
     prefix = "ar1_time",
     paper_prefix = "2_ar1",

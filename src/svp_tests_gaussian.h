@@ -18,16 +18,12 @@ class GaussianMean : public TestBase
 
     double statistic() const override
     {
-      // The unified Gaussian cost is twice the half-log-likelihood scale used
-      // by SVP and by the former FOCuS implementation.
-      return 0.5 * info.max_cost();
+      return info.max_cost();
     }
 
     bool passes(double gamma) const override
     {
-      // GaussianMean::statistic() is half the unified Gaussian cost. The
-      // threshold can therefore be checked directly while scanning costs.
-      return !info.exceeds_cost(2.0 * gamma);
+      return !info.exceeds_cost(gamma);
     }
 
 };

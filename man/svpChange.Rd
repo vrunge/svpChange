@@ -19,12 +19,15 @@ The package provides two main SVP interfaces:
 
 \describe{
 \item{\code{\link{SVP}}}{A compiled implementation with built-in
-validity tests, including Gaussian mean, Gamma rate, variance,
-quantile, rank-based, and AR(1) tests.}
+validity tests, including Gaussian mean, MS-l multiscale Gaussian mean,
+Gamma rate, variance, quantile, rank-based, and AR(1) tests.}
 \item{\code{\link{svp0}}}{A flexible implementation accepting an
 arbitrary R function of the form
 \code{function(segment, gamma)} as its validity test.}
 }
+
+The standalone \code{\link[=SVP_both_dyadic]{SVP_both_dyadic()}} entrypoint applies length-dependent
+dyadic thresholds to the Gaussian-mean test while using both pruning.
 
 Validity-test helpers include:
 \code{\link{valid_FOCUS}},
@@ -61,7 +64,7 @@ Frick, K., Munk, A., and Sieling, H. (2014).
 Multiscale Change-Point Inference.
 \emph{Journal of the Royal Statistical Society: Series B}, 76(3),
 495--580.
-\url{https://doi.org/10.1111/rssb.12047}
+\doi{10.1111/rssb.12047}
 
 Chakar, S., Lebarbier, E., Levy-Leduc, C., and Robin, S. (2017).
 A robust approach for estimating change-points in the mean of an AR(1)

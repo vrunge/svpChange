@@ -1,0 +1,7 @@
+Corrected Student-t(2) robust Section 5.2 paper figures.
+Selected RFPOP c = 2.74
+Selected Wilcoxon c = 1.63
+Selected MedianMood alpha = 0.006
+All SVP calls use subtests = right; K is the oracle data-generating segment count.
+Calibration target F1 = 0.99
+Gaussian-PELT benchmark F1 = 0.99

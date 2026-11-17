@@ -10,6 +10,12 @@ source(file.path("simulations", "time_common.R"))
 source(file.path("simulations", "power_ar1", "calibrate_ar1.R"))
 
 AR1_TIME_ROOT <- file.path("simulations", "time_ar1")
+
+## The timing study uses the same calibrated constants as the AR(1) power
+## study, so both report the same gamma scale.
+read_ar1_time_calibration <- function() {
+  readRDS(file.path("simulations", "power_ar1", "ar1_calibration.rds"))
+}
 AR1_TIME_METHODS <- function(calibration) ar1_method_labels(calibration)
 
 simulate_ar1_time_data <- function(
@@ -59,9 +65,7 @@ run_time_ar1 <- function(
     min_batch_time = 0.05,
     rho = AR1_RHO,
     jump = 10,
-    calibration = readRDS(file.path(
-      "simulations", "power_ar1", "ar1_calibration.rds"
-    ))) {
+    calibration = read_ar1_time_calibration()) {
   require_decafs()
   methods <- AR1_TIME_METHODS(calibration)
   set.seed(seed - 1L)
@@ -95,9 +99,7 @@ run_and_save_time_ar1_detected <- function(
     min_batch_time = 0.05,
     rho = AR1_RHO,
     jump = 10,
-    calibration = readRDS(file.path(
-      "simulations", "power_ar1", "ar1_calibration.rds"
-    ))) {
+    calibration = read_ar1_time_calibration()) {
   require_decafs()
   started <- proc.time()[["elapsed"]]
   methods <- AR1_TIME_METHODS(calibration)
@@ -136,7 +138,7 @@ run_and_save_time_ar1_detected <- function(
     results,
     root = AR1_TIME_ROOT,
     paper_root = normalizePath(
-      file.path("..", "SVP_NEW_Figures2"), mustWork = FALSE
+      file.path("simulations", "all_plots"), mustWork = FALSE
     ),
     prefix = "ar1_time",
     paper_prefix = "2_ar1",
@@ -198,9 +200,7 @@ run_and_save_time_ar1_pelt_detected <- function(
     min_batch_time = 0.2,
     rho = AR1_RHO,
     jump = 10,
-    calibration = readRDS(file.path(
-      "simulations", "power_ar1", "ar1_calibration.rds"
-    ))) {
+    calibration = read_ar1_time_calibration()) {
   require_decafs()
   started <- proc.time()[["elapsed"]]
   methods <- AR1_TIME_METHODS(calibration)[1:2]
@@ -241,7 +241,7 @@ run_and_save_time_ar1_pelt_detected <- function(
     results,
     root = AR1_TIME_ROOT,
     paper_root = normalizePath(
-      file.path("..", "SVP_NEW_Figures2"), mustWork = FALSE
+      file.path("simulations", "all_plots"), mustWork = FALSE
     ),
     prefix = "ar1_time",
     paper_prefix = "2_ar1",
@@ -293,9 +293,7 @@ run_and_save_time_ar1_pelt_detected <- function(
 }
 
 run_and_save_time_ar1 <- function(
-    calibration = readRDS(file.path(
-      "simulations", "power_ar1", "ar1_calibration.rds"
-    ))) {
+    calibration = read_ar1_time_calibration()) {
   require_decafs()
   started <- proc.time()[["elapsed"]]
   results <- run_time_ar1(calibration = calibration)
@@ -310,7 +308,7 @@ run_and_save_time_ar1 <- function(
     results,
     root = AR1_TIME_ROOT,
     paper_root = normalizePath(
-      file.path("..", "SVP_NEW_Figures2"), mustWork = FALSE
+      file.path("simulations", "all_plots"), mustWork = FALSE
     ),
     prefix = "ar1_time",
     paper_prefix = "2_ar1",

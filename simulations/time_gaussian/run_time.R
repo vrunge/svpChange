@@ -10,7 +10,13 @@ source(file.path("simulations", "gaussian_common.R"))
 
 GAUSSIAN_TIME_ROOT <- file.path("simulations", "time_gaussian")
 
-gaussian_time_methods <- function(constants = read_gaussian_calibration()) {
+## The timing study uses the same calibrated constants as the Gaussian power
+## study, so both report the same gamma scale.
+read_gaussian_time_calibration <- function() {
+  read_gaussian_calibration()
+}
+
+gaussian_time_methods <- function(constants = read_gaussian_time_calibration()) {
   c(
     "PELT",
     gaussian_method_label("none", constants[["none"]]),
@@ -30,7 +36,7 @@ simulate_gaussian_time_data <- function(n, changes = 0L, jump = 10) {
 }
 
 fit_gaussian_time_method <- function(
-  y, method, constants = read_gaussian_calibration()
+  y, method, constants = read_gaussian_time_calibration()
 ) {
   n <- length(y)
   if (method == "PELT") {
@@ -60,7 +66,7 @@ run_time_gaussian <- function(
   reps_none_n = 48L,
   reps_none_k = 48L,
   seed = 456L, min_batch_time = 0.05,
-  constants = read_gaussian_calibration()
+  constants = read_gaussian_time_calibration()
 ) {
   if (reps_none_n < reps_n || reps_none_k < reps_k) {
     stop("SVP none must have at least as many replicates as the other methods")
@@ -142,75 +148,6 @@ summarise_gaussian_time_detected <- function(
       )
     }) |>
     dplyr::ungroup()
-}
-
-summarise_gaussian_time_true_changes <- function(
-    results, draws = 1000L, seed = 904L) {
-  set.seed(seed)
-  results |>
-    dplyr::filter(
-      experiment == "vary_k", is.finite(time), time > 0
-    ) |>
-    dplyr::group_by(method, k) |>
-    dplyr::group_modify(function(data, key) {
-      interval <- bootstrap_median_interval(data$time, draws)
-      data.frame(
-        replicates = nrow(data),
-        mean_time = mean(data$time),
-        median_time = stats::median(data$time),
-        lower = interval[1L], upper = interval[2L]
-      )
-    }) |>
-    dplyr::ungroup()
-}
-
-plot_gaussian_time_true_changes <- function(
-    results, root = GAUSSIAN_TIME_ROOT,
-    paper_root = normalizePath(file.path("..", "SVP_NEW_Figures2"),
-                               mustWork = FALSE),
-    prefix = "gaussian_time") {
-  summary_k <- summarise_gaussian_time_true_changes(results)
-  method_colours <- time_method_palette(summary_k$method)
-  panel <- ggplot2::ggplot(
-    summary_k, ggplot2::aes(k, median_time, colour = method, fill = method)
-  ) +
-    ggplot2::geom_ribbon(
-      ggplot2::aes(ymin = lower, ymax = upper),
-      alpha = 0.12, colour = NA
-    ) +
-    ggplot2::geom_line(linewidth = 0.8) +
-    ggplot2::geom_point(size = 1.2) +
-    ggplot2::scale_y_log10() +
-    ggplot2::labs(
-      x = "True number of changes",
-      y = "Median elapsed time (s)",
-      colour = "Method", fill = "Method"
-    ) +
-    ggplot2::scale_colour_manual(values = method_colours) +
-    ggplot2::scale_fill_manual(values = method_colours) +
-    ggplot2::theme_minimal(base_size = 14L) +
-    ggplot2::theme(
-      panel.grid.minor = ggplot2::element_blank(),
-      legend.position = "top",
-      legend.direction = "horizontal"
-    )
-  dir.create(file.path(root, "plots"), recursive = TRUE,
-             showWarnings = FALSE)
-  dir.create(paper_root, recursive = TRUE, showWarnings = FALSE)
-  ggplot2::ggsave(
-    file.path(root, "plots", paste0(prefix, "_time_vs_true_changes.pdf")),
-    panel, width = 9, height = 5.2
-  )
-  ggplot2::ggsave(
-    file.path(paper_root, "2_gaussian_time_vs_true_changes.pdf"),
-    panel, width = 9, height = 5.2
-  )
-  utils::write.csv(
-    summary_k,
-    file.path(root, "gaussian_time_summary_by_true_changes.csv"),
-    row.names = FALSE
-  )
-  invisible(list(panel = panel, summary = summary_k))
 }
 
 bootstrap_log_slope <- function(data, tail_only = FALSE, min_n = NULL,
@@ -364,37 +301,7 @@ plot_gaussian_paper_time <- function(results, root, prefix = "gaussian_time") {
     panel_a, panel_b, base_size = paper_base_size
   )
 
-  plot_root <- file.path(GAUSSIAN_TIME_ROOT, "plots")
-  dir.create(plot_root, recursive = TRUE, showWarnings = FALSE)
   dir.create(root, recursive = TRUE, showWarnings = FALSE)
-  ggplot2::ggsave(file.path(plot_root, paste0(prefix, "_time_vs_n.pdf")),
-    panel_a,
-    width = 9, height = 5.2
-  )
-  ggplot2::ggsave(file.path(plot_root, paste0(prefix, "_time_vs_detected.pdf")),
-    panel_b,
-    width = 9, height = 5.2
-  )
-  ggplot2::ggsave(file.path(root, "2_exp1_time_vs_n.pdf"),
-    panel_a,
-    width = 9, height = 5.2
-  )
-  ggplot2::ggsave(file.path(root, "2_time_vs_detected_changes.pdf"),
-    panel_b,
-    width = 9, height = 5.2
-  )
-  ggplot2::ggsave(file.path(root, "2_gaussian_time_vs_n.pdf"),
-    panel_a,
-    width = 9, height = 5.2
-  )
-  ggplot2::ggsave(file.path(root, "2_gaussian_time_vs_detected.pdf"),
-    panel_b,
-    width = 9, height = 5.2
-  )
-  ggplot2::ggsave(file.path(plot_root, paste0(prefix, "_time_pair.pdf")),
-    combined,
-    width = 13.2, height = 5.6
-  )
   ggplot2::ggsave(file.path(root, "2_gaussian_time.pdf"),
     combined,
     width = 13.2, height = 5.6
@@ -435,7 +342,7 @@ run_and_save_time_gaussian <- function(prefix = "gaussian_time") {
   )
   plot_gaussian_paper_time(
     results,
-    normalizePath(file.path("..", "SVP_NEW_Figures2"), mustWork = FALSE),
+    normalizePath(file.path("simulations", "all_plots"), mustWork = FALSE),
     prefix
   )
   manifest <- c(

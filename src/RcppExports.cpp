@@ -73,6 +73,20 @@ BEGIN_RCPP
     return rcpp_result_gen;
 END_RCPP
 }
+// consistency_sharp_statistic_cpp
+double consistency_sharp_statistic_cpp(std::vector<double> data, double sigma2, int N, bool accelerated);
+RcppExport SEXP _svpChange_consistency_sharp_statistic_cpp(SEXP dataSEXP, SEXP sigma2SEXP, SEXP NSEXP, SEXP acceleratedSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< std::vector<double> >::type data(dataSEXP);
+    Rcpp::traits::input_parameter< double >::type sigma2(sigma2SEXP);
+    Rcpp::traits::input_parameter< int >::type N(NSEXP);
+    Rcpp::traits::input_parameter< bool >::type accelerated(acceleratedSEXP);
+    rcpp_result_gen = Rcpp::wrap(consistency_sharp_statistic_cpp(data, sigma2, N, accelerated));
+    return rcpp_result_gen;
+END_RCPP
+}
 // focus_valid_cpp
 bool focus_valid_cpp(std::vector<double> data, double gamma, bool check_all_prefixes);
 RcppExport SEXP _svpChange_focus_valid_cpp(SEXP dataSEXP, SEXP gammaSEXP, SEXP check_all_prefixesSEXP) {
@@ -87,8 +101,8 @@ BEGIN_RCPP
 END_RCPP
 }
 // SVP
-List SVP(std::vector<double> data, double gamma, std::string test, std::string subtests, double sigma2, double rho, bool profile_sigma, double quantile, std::string cost);
-RcppExport SEXP _svpChange_SVP(SEXP dataSEXP, SEXP gammaSEXP, SEXP testSEXP, SEXP subtestsSEXP, SEXP sigma2SEXP, SEXP rhoSEXP, SEXP profile_sigmaSEXP, SEXP quantileSEXP, SEXP costSEXP) {
+List SVP(std::vector<double> data, double gamma, std::string test, std::string subtests, double sigma2, double rho, bool profile_sigma, double quantile, std::string cost, int r_min, double r_min_frac, double abc_A, double abc_B, double abc_C);
+RcppExport SEXP _svpChange_SVP(SEXP dataSEXP, SEXP gammaSEXP, SEXP testSEXP, SEXP subtestsSEXP, SEXP sigma2SEXP, SEXP rhoSEXP, SEXP profile_sigmaSEXP, SEXP quantileSEXP, SEXP costSEXP, SEXP r_minSEXP, SEXP r_min_fracSEXP, SEXP abc_ASEXP, SEXP abc_BSEXP, SEXP abc_CSEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
     Rcpp::RNGScope rcpp_rngScope_gen;
@@ -101,7 +115,12 @@ BEGIN_RCPP
     Rcpp::traits::input_parameter< bool >::type profile_sigma(profile_sigmaSEXP);
     Rcpp::traits::input_parameter< double >::type quantile(quantileSEXP);
     Rcpp::traits::input_parameter< std::string >::type cost(costSEXP);
-    rcpp_result_gen = Rcpp::wrap(SVP(data, gamma, test, subtests, sigma2, rho, profile_sigma, quantile, cost));
+    Rcpp::traits::input_parameter< int >::type r_min(r_minSEXP);
+    Rcpp::traits::input_parameter< double >::type r_min_frac(r_min_fracSEXP);
+    Rcpp::traits::input_parameter< double >::type abc_A(abc_ASEXP);
+    Rcpp::traits::input_parameter< double >::type abc_B(abc_BSEXP);
+    Rcpp::traits::input_parameter< double >::type abc_C(abc_CSEXP);
+    rcpp_result_gen = Rcpp::wrap(SVP(data, gamma, test, subtests, sigma2, rho, profile_sigma, quantile, cost, r_min, r_min_frac, abc_A, abc_B, abc_C));
     return rcpp_result_gen;
 END_RCPP
 }
@@ -120,6 +139,18 @@ BEGIN_RCPP
     return rcpp_result_gen;
 END_RCPP
 }
+// SVP_both_dyadic
+Rcpp::List SVP_both_dyadic(std::vector<double> data, Rcpp::NumericVector gamma);
+RcppExport SEXP _svpChange_SVP_both_dyadic(SEXP dataSEXP, SEXP gammaSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< std::vector<double> >::type data(dataSEXP);
+    Rcpp::traits::input_parameter< Rcpp::NumericVector >::type gamma(gammaSEXP);
+    rcpp_result_gen = Rcpp::wrap(SVP_both_dyadic(data, gamma));
+    return rcpp_result_gen;
+END_RCPP
+}
 // svp_smuce_cpp
 IntegerVector svp_smuce_cpp(NumericVector y, double q, double sigma2);
 RcppExport SEXP _svpChange_svp_smuce_cpp(SEXP ySEXP, SEXP qSEXP, SEXP sigma2SEXP) {
@@ -133,6 +164,33 @@ BEGIN_RCPP
     return rcpp_result_gen;
 END_RCPP
 }
+// svp_smuce_dyadic_cpp
+IntegerVector svp_smuce_dyadic_cpp(NumericVector y, double q, double sigma2);
+RcppExport SEXP _svpChange_svp_smuce_dyadic_cpp(SEXP ySEXP, SEXP qSEXP, SEXP sigma2SEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< NumericVector >::type y(ySEXP);
+    Rcpp::traits::input_parameter< double >::type q(qSEXP);
+    Rcpp::traits::input_parameter< double >::type sigma2(sigma2SEXP);
+    rcpp_result_gen = Rcpp::wrap(svp_smuce_dyadic_cpp(y, q, sigma2));
+    return rcpp_result_gen;
+END_RCPP
+}
+// verzelen_statistic_cpp
+double verzelen_statistic_cpp(std::vector<double> data, double sigma2, int N, bool accelerated);
+RcppExport SEXP _svpChange_verzelen_statistic_cpp(SEXP dataSEXP, SEXP sigma2SEXP, SEXP NSEXP, SEXP acceleratedSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< std::vector<double> >::type data(dataSEXP);
+    Rcpp::traits::input_parameter< double >::type sigma2(sigma2SEXP);
+    Rcpp::traits::input_parameter< int >::type N(NSEXP);
+    Rcpp::traits::input_parameter< bool >::type accelerated(acceleratedSEXP);
+    rcpp_result_gen = Rcpp::wrap(verzelen_statistic_cpp(data, sigma2, N, accelerated));
+    return rcpp_result_gen;
+END_RCPP
+}
 
 static const R_CallMethodDef CallEntries[] = {
     {"_svpChange_OP", (DL_FUNC) &_svpChange_OP, 2},
@@ -140,10 +198,14 @@ static const R_CallMethodDef CallEntries[] = {
     {"_svpChange_SN", (DL_FUNC) &_svpChange_SN, 2},
     {"_svpChange_AR1_rho", (DL_FUNC) &_svpChange_AR1_rho, 1},
     {"_svpChange_AR1_single_change", (DL_FUNC) &_svpChange_AR1_single_change, 5},
+    {"_svpChange_consistency_sharp_statistic_cpp", (DL_FUNC) &_svpChange_consistency_sharp_statistic_cpp, 4},
     {"_svpChange_focus_valid_cpp", (DL_FUNC) &_svpChange_focus_valid_cpp, 3},
-    {"_svpChange_SVP", (DL_FUNC) &_svpChange_SVP, 9},
+    {"_svpChange_SVP", (DL_FUNC) &_svpChange_SVP, 14},
     {"_svpChange_svp0", (DL_FUNC) &_svpChange_svp0, 5},
+    {"_svpChange_SVP_both_dyadic", (DL_FUNC) &_svpChange_SVP_both_dyadic, 2},
     {"_svpChange_svp_smuce_cpp", (DL_FUNC) &_svpChange_svp_smuce_cpp, 3},
+    {"_svpChange_svp_smuce_dyadic_cpp", (DL_FUNC) &_svpChange_svp_smuce_dyadic_cpp, 3},
+    {"_svpChange_verzelen_statistic_cpp", (DL_FUNC) &_svpChange_verzelen_statistic_cpp, 4},
     {NULL, NULL, 0}
 };
 

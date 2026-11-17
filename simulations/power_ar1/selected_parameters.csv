@@ -1,4 +1,5 @@
 "method","parameter","target_f1","decafs_version"
-"DeCAFS AR1",2.75,0.995,"3.3.6"
-"PELT AR1 approximate",0.9,0.995,"3.3.6"
-"SVP AR1Focus",1.95,0.995,"3.3.6"
+"DeCAFS AR1",2.47,0.99,"3.3.6"
+"PELT AR1 approximate",0.76,0.99,"3.3.6"
+"PELT inflated calibrated",1.765,0.99,"3.3.6"
+"SVP AR1Focus",3.54,0.99,"3.3.6"

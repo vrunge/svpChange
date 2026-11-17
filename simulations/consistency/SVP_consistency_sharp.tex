@@ -1,0 +1,1369 @@
+% Compile in this directory with: latexmk -pdf SVP_consistency_sharp.tex
+\documentclass[pdflatex,sn-mathphys-num]{sn-jnl}
+\usepackage{amsmath,amssymb,amsfonts,amsthm,booktabs,array}
+\DeclareMathOperator*{\argmin}{arg\,min}
+\newcommand{\Prob}{\mathbb P}
+\newcommand{\E}{\mathbb E}
+\newcommand{\R}{\mathbb R}
+\newcommand{\Z}{\mathbb Z}
+\newcommand{\C}{\mathcal C}
+\newcommand{\taus}{\tau^\star}
+\newcommand{\Kh}{\widehat K_n}
+\newcommand{\tht}{\widehat\tau_n}
+\newcommand{\tol}{\widetilde\tau_n}
+\newcommand{\op}{o_{\Prob}}
+\newcommand{\Op}{O_{\Prob}}
+\newcommand{\norm}[1]{\left\lVert#1\right\rVert}
+\newcommand{\abs}[1]{\left\lvert#1\right\rvert}
+\theoremstyle{thmstyleone}
+\newtheorem{theorem}{Theorem}
+\newtheorem{proposition}[theorem]{Proposition}
+\newtheorem{lemma}[theorem]{Lemma}
+\newtheorem{corollary}[theorem]{Corollary}
+\theoremstyle{thmstyletwo}
+\newtheorem{remark}{Remark}
+\raggedbottom
+\begin{document}
+\title[Consistency and multiscale localization of SVP]{Sharp consistency, multiscale localization and oracle asymptotics for Gaussian smallest valid partitioning}
+\author*[1]{\fnm{Vincent} \sur{Runge}}\email{vincent.runge@univ-evry.fr}
+\affil*[1]{\orgdiv{Laboratoire de Math\'ematiques et Mod\'elisation d'Evry},
+\orgname{Universit\'e Paris-Saclay, CNRS, Univ Evry},
+\city{Evry-Courcouronnes}, \postcode{91037}, \country{France}}
+\abstract{We study Gaussian smallest valid partitioning with a least-squares tie-break, for both the ordinary single-change scan and a multiscale subsegment constraint. For the ordinary scan, a threshold just above the second-order Darling--Erd\H{o}s boundary yields consistent selection on macroscopic segments; its leading scale is $\log\log n$. A central plateau demonstrates failure on shorter segments despite strong local signals. Testing all subsegments with a correction based on the effective length of each split removes this dilution. A simultaneous CUSUM bound gives uniform finite-sample overestimation control, and local witnesses give explicit count and localization bounds for unequal lengths, shrinking jumps and increasing segment counts. The corrected null maximum is bounded in probability, so an arbitrarily slowly diverging additive threshold suffices under the corresponding signal condition. For fixed nonzero jumps on macroscopic segments, both procedures equal the least-squares estimator supplied with the true count with probability tending to one; their location, level and empirical-loss limits follow. We distinguish improved detection conditions from the irreducible integer location uncertainty and specify the validity and pruning requirements of the multiscale construction.}
+\keywords{Change-point detection, multiscale inference, Gaussian bridge, consistency, oracle equivalence, nonregular asymptotics}
+\maketitle
+
+\section{Setting and principal result}\label{sec:setting}
+
+For each $n$, let
+\begin{equation}\label{eq:model}
+Y_i=\mu_i+\sigma\varepsilon_i,\qquad
+\varepsilon_1,\ldots,\varepsilon_n\ \text{i.i.d. }\mathcal N(0,1),
+\qquad \sigma>0.
+\end{equation}
+The means are deterministic and constant on the segments of
+$\taus=(0=\taus_0<\taus_1<\cdots<\taus_{K_n^\star}=n)$.
+Write $m_{k,n}=\taus_k-\taus_{k-1}$, $\ell_n=\min_k m_{k,n}$,
+and $\theta_{k,n}$ for the mean on segment $k$. All internal changes are genuine:
+$\Delta_{j,n}=|\theta_{j+1,n}-\theta_{j,n}|>0$.
+When $K_n^\star\ge2$, put $\Delta_n=\min_j\Delta_{j,n}$.
+The no-change case $K_n^\star=1$ is treated separately whenever this minimum occurs.
+No dependence assumption between different rows $n$ is needed for convergence in probability.
+
+For integer boundaries $0\le a<b\le n$, $Y_{a..b}$ comprises observations
+$a+1,\ldots,b$. With known $\sigma$, define
+\begin{align}
+\C(Y_{a..b})&=\frac{1}{2\sigma^2}\sum_{i=a+1}^b(Y_i-\overline Y_{a..b})^2,\label{eq:cost}\\
+Z_u(a,b)&=\frac{1}{\sigma}\sqrt{\frac{(u-a)(b-u)}{b-a}}
+  (\overline Y_{a..u}-\overline Y_{u..b}),\label{eq:contrast}\\
+f(Y_{a..b})&=\frac12\max_{a<u<b} Z_u(a,b)^2.\label{eq:scan}
+\end{align}
+Set $f=0$ for a singleton. A partition $\tau$ is $\gamma$-valid if
+every segment has $f\le\gamma$. The SVP estimator $\tht$ minimizes
+$(K(\tau),Q(\tau))$ in lexicographic order over valid partitions, where
+$Q(\tau)=\sum_k\C(Y_{\tau_{k-1}..\tau_k})$ and $K$ counts \emph{segments}.
+Singletons ensure feasibility for every $\gamma\ge0$.
+Use lexicographically smallest internal boundary vectors to resolve any remaining ties.
+Sections~\ref{sec:setting}--\ref{sec:limits} concern the exact optimizer with
+\texttt{subtests = "none"}. Section~\ref{sec:multiscale} defines a separate
+multiscale estimator with \texttt{subtests = "both"}; its scale correction
+is part of the validity statistic.
+
+For all sufficiently large $n$, define
+\begin{equation}\label{eq:centering}
+d_n=\log\log n+\frac12\log\log\log n-\frac12\log\pi.
+\end{equation}
+Values for finitely many small $n$ may be assigned arbitrarily.
+
+\begin{theorem}[Consistency at the sharp null threshold]\label{thm:main}
+Suppose $K_n^\star=K^\star$ is fixed and $\ell_n\ge an$ for a fixed $a>0$.
+Let $\gamma_n\ge0$ be deterministic and satisfy
+\begin{equation}\label{eq:threshold-main}
+\gamma_n-d_n\longrightarrow+\infty.
+\end{equation}
+If $K^\star\ge2$, assume also
+\begin{equation}\label{eq:signal-main}
+\gamma_n=o(n\Delta_n^2/\sigma^2).
+\end{equation}
+Then
+\begin{equation}\label{eq:count-main}
+\Prob(\Kh=K^\star)\longrightarrow1.
+\end{equation}
+For $K^\star\ge2$, on the event of equal counts match boundaries in increasing order.
+For every $\eta>0$,
+\begin{equation}\label{eq:relative-main}
+\Prob\left(\Kh=K^\star,\ 
+\max_{1\le j<K^\star}|\widehat\tau_j-\taus_j|<\eta n\right)
+\longrightarrow1.
+\end{equation}
+Under $K^\star=1$, condition~\eqref{eq:threshold-main} is also necessary for
+\eqref{eq:count-main}.
+\end{theorem}
+
+Thus $\gamma_n=(1+\epsilon)\log\log n$, for any fixed $\epsilon>0$,
+suffices whenever $n\Delta_n^2/(\sigma^2\log\log n)\to\infty$.
+More finely, one may use $\gamma_n=d_n+w_n$ with $w_n\to\infty$ arbitrarily slowly,
+provided~\eqref{eq:signal-main} holds. The necessity statement concerns uniform
+calibration over a class including constant signals; it does not assert necessity
+of every signal-strength condition below. All thresholds use the cost units
+in~\eqref{eq:cost}.
+
+The proof is given in Section~\ref{sec:consequences}. Its main ingredients are a
+finite-sample Gaussian bridge bound and a deterministic implication of validity.
+The latter also covers increasing segment counts and unequal segment lengths.
+For the multiscale estimator, Theorems~\ref{thm:ms-finite} and~\ref{thm:ms-consistency}
+give recovery guarantees under local signal conditions, while Theorem~\ref{thm:ms-oracle}
+preserves the fixed-signal oracle limits. Throughout, $K$ counts segments.
+Section~\ref{sec:oracle} strengthens the conclusion to oracle equivalence and
+nonregular location limits when the segment levels are fixed.
+
+\section{Null calibration: finite samples and the critical boundary}\label{sec:null}
+
+For $m\ge2$ and $q>1$, set
+\begin{equation}\label{eq:peeling-number}
+\begin{aligned}
+J_q(m)&=\max\left\{1,\left\lceil\frac{2\log(m-1)}{\log q}\right\rceil\right\},\\
+U_m(\gamma)&=\min\left\{1,(m-1)e^{-\gamma},
+\inf_{q>1}2J_q(m)e^{-\gamma/q}\right\}.
+\end{aligned}
+\end{equation}
+Set $U_1(\gamma)=0$. The infimum is a deterministic bound, not a data-dependent
+choice of threshold.
+
+\begin{lemma}[Gaussian bridge bound]\label{lem:null}
+On a constant-mean segment of length $m$, for every $\gamma\ge0$,
+\begin{equation}\label{eq:null-tail}
+\Prob\{f(Y_{a..a+m})>\gamma\}\le U_m(\gamma).
+\end{equation}
+For each fixed $q>1$ there is $C_q<\infty$ such that
+$U_m(\gamma)\le C_q(1+\log m)e^{-\gamma/q}$ for every $m\ge2$.
+\end{lemma}
+\begin{proof}
+Let $S_k=\sum_{i=1}^k\varepsilon_{a+i}$. The standardized contrasts are
+$(S_k-kS_m/m)/\sqrt{k(1-k/m)}$. Their joint distribution is exactly
+$B(k/m)/\sqrt{(k/m)(1-k/m)}$, with $B$ a standard Brownian bridge.
+The covariance identity
+$B(t)\overset{d}=(1-t)W(t/(1-t))$ gives the process representation
+\[
+\left\{\frac{B(t)}{\sqrt{t(1-t)}}:0<t<1\right\}
+\overset{d}=\left\{\frac{W(s)}{\sqrt{s}}:s=\frac{t}{1-t}>0\right\},
+\]
+where $W$ is standard Brownian motion. The discrete scan is bounded by the
+continuous supremum over $s\in[(m-1)^{-1},m-1]$.
+Cover this interval with $J_q(m)$ intervals $[v,qv]$, starting at
+$v=(m-1)^{-1}$. On such an interval,
+\[
+\Prob\left\{\sup_{v\le s\le qv}\frac{|W(s)|}{\sqrt{s}}>\sqrt{2\gamma}\right\}
+\le\Prob\left\{\sup_{0\le s\le qv}|W(s)|>\sqrt{2\gamma v}\right\}
+\le4\overline\Phi(\sqrt{2\gamma/q})\le2e^{-\gamma/q}.
+\]
+The reflection principle gives the penultimate inequality.
+The last one uses $2\overline\Phi(x)\le e^{-x^2/2}$, $x\ge0$.
+Union over the covering intervals proves the peeling bound.
+Alternatively, the $m-1$ discrete contrasts are each standard normal, giving
+$(m-1)e^{-\gamma}$. Taking the minimum proves the claim, including $m=2$.
+\end{proof}
+
+Let $p_m(\gamma)$ denote the exact null probability
+$\Prob\{f(Y_{0..m})\le\gamma\}$. It depends on $m$ and $\gamma$ only.
+Independence between true segments gives
+\begin{equation}\label{eq:true-feasibility}
+\Prob\{\taus\text{ is valid}\}=\prod_{k=1}^{K_n^\star}p_{m_{k,n}}(\gamma),
+\qquad
+\Prob(\Kh>K_n^\star)\le1-\prod_kp_{m_{k,n}}(\gamma)
+\le\sum_k U_{m_{k,n}}(\gamma).
+\end{equation}
+No independence between contrasts within one segment is assumed.
+
+\begin{proposition}[Second-order null boundary]\label{prop:DE}
+For a constant-mean segment of length $m\to\infty$,
+\begin{equation}\label{eq:DE}
+f(Y_{0..m})-d_m\ \Longrightarrow\ H,
+\qquad \Prob(H\le x)=\exp\{-2e^{-x}\},\quad x\in\R.
+\end{equation}
+Consequently, for arbitrary deterministic $\gamma_n\ge0$ in the no-change model,
+\begin{equation}\label{eq:null-iff}
+\Prob(\Kh=1)\to1\quad\Longleftrightarrow\quad\gamma_n-d_n\to+\infty.
+\end{equation}
+If $\gamma_n-d_n\to x\in\R$, this probability tends to $\exp\{-2e^{-x}\}$;
+if $\gamma_n-d_n\to-\infty$, it tends to zero.
+\end{proposition}
+\begin{proof}
+Put $M_m=\max_{1\le k<m}|S_k-kS_m/m|/\sqrt{k(1-k/m)}$.
+The scalar Darling--Erd\H{o}s theorem states that
+\[
+\sqrt{2\log\log m}\,M_m-
+\left(2\log\log m+\tfrac12\log\log\log m-\tfrac12\log\pi\right)
+\Longrightarrow H.
+\]
+An accessible theorem-level source is \cite[Equation (3.7), p.~8, and
+Theorem 3.10, p.~11]{torgovitski2016}: take dimension one and independent
+standard Gaussian observations (equivalently, constant functions with that
+random value). The covariance eigenvalue is one; stationarity, every required
+moment, causality, and the approximation condition hold, the latter with zero
+error. This verifies the hypotheses rather than using their displayed
+Assumption (L) without justification.
+Squaring the expansion gives $M_m^2/2=d_m+H_m+\op(1)$ with
+$H_m\Longrightarrow H$, because $(\log\log\log m)^2/\log\log m\to0$.
+This proves~\eqref{eq:DE}.
+
+There is exactly one one-segment partition, so $\{\Kh=1\}=
+\{f(Y_{0..n})\le\gamma_n\}$. Tightness proves sufficiency in~\eqref{eq:null-iff}.
+If $\gamma_n-d_n$ does not tend to $+\infty$, along a subsequence it is bounded
+above by some $A<\infty$; the limsup along that subsequence is at most
+$\exp\{-2e^{-A}\}<1$. This proves necessity. The remaining assertions follow
+from continuity and the tails of the limit distribution.
+\end{proof}
+
+\begin{remark}[Fixed error probability]
+The asymptotic null threshold at rejection probability $\alpha\in(0,1)$ is
+$d_n+\log2-\log\{-\log(1-\alpha)\}$. It has a limiting nonzero false-split
+probability and therefore does not give count consistency. For fixed
+$K^\star$ and $m_{k,n}/n\to p_k>0$, the true partition is valid at threshold
+$d_n+x$ with limiting probability $\exp\{-2K^\star e^{-x}\}$.
+This last probability is a feasibility probability, not a claimed exact
+selection probability when $K^\star>1$.
+\end{remark}
+
+\section{A deterministic argument and finite-sample recovery}\label{sec:finite}
+
+\begin{lemma}[What validity forces locally]\label{lem:local}
+Let $(a,b]$ be $\gamma$-valid, of length $M=b-a$. If $t,r$ are integers,
+$r\ge1$, and $a\le t-r<t<t+r\le b$, then
+\begin{equation}\label{eq:local-constraint}
+\frac{1}{\sigma}\sqrt{\frac r2}
+  |\overline Y_{t..t+r}-\overline Y_{t-r..t}|
+\le2\sqrt{\frac{\gamma M}{r}}.
+\end{equation}
+\end{lemma}
+\begin{proof}
+Define $V(u)=\sum_{i=a+1}^u(Y_i-\overline Y_{a..b})$, including $V(a)=V(b)=0$.
+Validity and~\eqref{eq:contrast} imply, at every integer $u\in[a,b]$,
+\[
+|V(u)|\le\sigma\sqrt{2\gamma}\sqrt{\frac{(u-a)(b-u)}{M}}
+\le\sigma\sqrt{\frac{\gamma M}{2}}.
+\]
+Since
+$r(\overline Y_{t..t+r}-\overline Y_{t-r..t})=V(t+r)-2V(t)+V(t-r)$,
+the triangle inequality and division by $\sigma\sqrt{2r}$ give the result.
+The argument remains valid when $t-r=a$ or $t+r=b$.
+\end{proof}
+
+Suppress $n$ in the next theorem. For each true change choose a deterministic
+integer radius $r_j\ge1$ with
+\begin{equation}\label{eq:radii}
+r_j\le\min(m_j,m_{j+1}),\qquad
+r_j+r_{j+1}\le m_{j+1}+1\quad(1\le j<K^\star-1).
+\end{equation}
+The integer neighborhoods $\mathcal B_j=\{t\in\Z:|t-\taus_j|<r_j\}$
+are then disjoint and lie in $\{1,\ldots,n-1\}$.
+The uniform choice $r_j=\lceil\ell_n/2\rceil$ is always allowed, even when
+$\ell_n=1$. Define
+\begin{equation}\label{eq:margin}
+A_j=\frac{\Delta_j}{\sigma}\sqrt{\frac{r_j}{2}},\qquad
+B_j=2\sqrt{\frac{\gamma n}{r_j}},\qquad
+v_j=\Phi(B_j-A_j)-\Phi(-B_j-A_j).
+\end{equation}
+Here $\Phi$ is the standard normal distribution function.
+
+\begin{theorem}[Finite-sample count and location bounds]\label{thm:finite}
+Under~\eqref{eq:model}, for every $\gamma\ge0$ and radii~\eqref{eq:radii},
+\begin{align}
+\Prob(\Kh>K^\star)&\le1-\prod_kp_{m_k}(\gamma),\label{eq:over}\\
+\Prob(\Kh<K^\star)&\le\sum_{j=1}^{K^\star-1}v_j,\label{eq:under}\\
+\Prob\left(\Kh=K^\star,\ |\widehat\tau_j-\taus_j|<r_j\ \forall j\right)
+&\ge\prod_kp_{m_k}(\gamma)-\sum_jv_j.\label{eq:joint}
+\end{align}
+In particular, the failure probability in~\eqref{eq:joint} is bounded by
+\begin{equation}\label{eq:failure-bound}
+\sum_k U_{m_k}(\gamma)+
+\sum_j\exp\left\{-\frac12(A_j-B_j)_+^2\right\},
+\qquad x_+=\max(x,0).
+\end{equation}
+Empty sums and products have their usual meanings, so the result includes
+$K^\star=1$. Bounds may always be truncated to $[0,1]$.
+\end{theorem}
+\begin{proof}
+On the deterministic windows around $\taus_j$, let
+\[
+D_j=\frac{1}{\sigma}\sqrt{\frac{r_j}{2}}
+  (\overline Y_{\taus_j..\taus_j+r_j}
+    -\overline Y_{\taus_j-r_j..\taus_j}).
+\]
+The windows lie inside the two adjacent true segments. Thus $D_j$ is normal
+with variance one and mean of absolute value $A_j$, and
+$\Prob(|D_j|\le B_j)=v_j$.
+Suppose $|D_j|>B_j$. Any partition without an internal boundary in
+$\mathcal B_j$ contains $[\taus_j-r_j,\taus_j+r_j]$ in the closure of a single
+segment. That segment has length at most $n$ and is invalid by
+Lemma~\ref{lem:local}. Therefore, on $\bigcap_j\{|D_j|>B_j\}$, every valid
+partition has a boundary in each $\mathcal B_j$, and hence at least $K^\star$
+segments. If it has exactly $K^\star$ segments, there is exactly one boundary
+in each neighborhood, with the asserted ordered matching.
+
+When the true partition is valid, SVP has at most $K^\star$ segments.
+Intersect these events and use the union bound for the $D_j$. Their mutual
+independence is unnecessary. This proves~\eqref{eq:over}--\eqref{eq:joint}.
+Finally, if $A_j>B_j$, symmetry and a one-sided normal tail give
+$v_j\le\Phi(B_j-A_j)\le\exp\{-(A_j-B_j)^2/2\}$.
+If $A_j\le B_j$, use $v_j\le1$; combine with Lemma~\ref{lem:null}.
+\end{proof}
+
+\begin{corollary}[Explicit confidence radii]\label{cor:radii}
+Let $K^\star\ge2$, $\alpha\in(0,1)$, and choose admissible radii satisfying
+\begin{equation}\label{eq:confidence-radii}
+r_j\ge\max\left\{
+\frac{4\sqrt{2}\,\sigma\sqrt{n\gamma}}{\Delta_j},
+\frac{16\sigma^2}{\Delta_j^2}\log\frac{K^\star-1}{\alpha}
+\right\}.
+\end{equation}
+The probability in~\eqref{eq:joint} is at least
+$1-\sum_kU_{m_k}(\gamma)-\alpha$.
+\end{corollary}
+\begin{proof}
+The first inequality implies $B_j\le A_j/2$; the second implies
+$A_j^2/8=\Delta_j^2r_j/(16\sigma^2)\ge\log((K^\star-1)/\alpha)$.
+Apply~\eqref{eq:failure-bound}.
+\end{proof}
+
+These radii are guarantees from validity alone. They are not the final
+statistical precision of the least-squares tie-break. Their dependence on
+$\sqrt n$ reflects the ability of a whole-interval scan to dilute a local
+change. Section~\ref{sec:limits} shows that dilution can be a genuine
+obstruction to selection for plain SVP.
+
+\section{Consistency consequences}\label{sec:consequences}
+
+\begin{proof}[Proof of Theorem~\ref{thm:main}]
+Since $an\le m_{k,n}\le n$, we have $d_{m_{k,n}}-d_n\to0$ uniformly over the
+fixed number of true segments. Proposition~\ref{prop:DE} and
+$\gamma_n-d_n\to\infty$ imply true-partition feasibility with probability
+tending to one. This argument applies to every sequence of segment lengths
+in $[an,n]$: failure of uniform tightness would supply a contradicting
+subsequence to~\eqref{eq:DE}.
+
+When $K^\star\ge2$, fix $0<b<\min(a/2,\eta)$ and take $r_j=\lfloor bn\rfloor$.
+These radii satisfy~\eqref{eq:radii} for large $n$.
+Uniformly in $j$,
+\[
+\frac{B_j}{A_j}=\frac{2\sqrt{2}\sigma\sqrt{n\gamma_n}}{\Delta_{j,n}r_j}
+\longrightarrow0,
+\qquad
+\min_j A_j^2\ge\frac{\Delta_n^2\lfloor bn\rfloor}{2\sigma^2}\longrightarrow\infty.
+\]
+The latter follows because $\gamma_n\to\infty$ and~\eqref{eq:signal-main} holds.
+Theorem~\ref{thm:finite} proves both count and relative-location consistency.
+For $K^\star=1$, use Proposition~\ref{prop:DE} directly.
+\end{proof}
+
+\begin{corollary}[Increasing segment counts]\label{cor:growing}
+Allow $K_n^\star\ge2$ to depend on $n$. Suppose $\gamma_n\to\infty$ and
+\begin{equation}\label{eq:growing}
+\sum_k U_{m_{k,n}}(\gamma_n)\to0,\qquad
+\frac{\ell_n^2\Delta_n^2}{\sigma^2 n\gamma_n}\to\infty,\qquad
+\log(K_n^\star+1)=o(\ell_n\Delta_n^2/\sigma^2).
+\end{equation}
+Then $\Prob(\Kh=K_n^\star)\to1$.
+If also $\ell_n\to\infty$, then, for every $\eta>0$,
+\[
+\Prob\left(\Kh=K_n^\star,\
+\max_j|\widehat\tau_j-\taus_j|<\eta\ell_n\right)\to1.
+\]
+\end{corollary}
+\begin{proof}
+For count recovery use $r_j=\lceil\ell_n/2\rceil$. Then $B_j/A_j\to0$ uniformly
+and, eventually, the second term in~\eqref{eq:failure-bound} is at most
+$(K_n^\star-1)\exp\{-\ell_n\Delta_n^2/(32\sigma^2)\}$, which tends to zero.
+For relative localization use $r_j=\lfloor b\ell_n\rfloor$ with
+$0<b<\min(1/2,\eta)$. The same argument applies with a different fixed constant.
+\end{proof}
+
+The first condition in~\eqref{eq:growing} is explicit and accommodates different
+calibrations. For example, it follows from
+$K_n^\star(1+\log n)e^{-\gamma_n/q}\to0$ for a fixed $q>1$.
+If a deterministic bound $K_n^\star\le\overline K_n$ is available, one choice is
+$\gamma_n=q\{\log\overline K_n+\log(1+\log n)+w_n\}$ with $w_n\to\infty$.
+Without such a bound, $\gamma_n=c\log n$, $c>1$, gives
+$\sum_kU_{m_{k,n}}(\gamma_n)\le n^{1-c}$.
+The remaining conditions in~\eqref{eq:growing} must still be checked.
+They are sufficient conditions for this estimator, not minimax conditions
+for arbitrary change-point procedures.
+
+\begin{proposition}[Almost-sure count recovery]\label{prop:strong}
+Place the rows on any common probability space. Suppose $K^\star$ is fixed,
+$\ell_n\ge an$, and, when $K^\star\ge2$, $\inf_n\Delta_n/\sigma>0$.
+For $\gamma_n=c\log n$ with any $c>1$, almost surely
+$\Kh=K^\star$ for every sufficiently large $n$.
+Conversely, for a single nested i.i.d. Gaussian sequence with constant mean,
+if $\gamma_n\le c\log n$ eventually for some $0\le c<1$, then
+$\Kh>1$ infinitely often almost surely.
+\end{proposition}
+\begin{proof}
+Choose $1<q<c$. The overestimation bound is
+$O((1+\log n)n^{-c/q})$, which is summable. With radii proportional to $n$,
+the underestimation bound in~\eqref{eq:failure-bound} is $O(e^{-c_1n})$ for
+some $c_1>0$. The first Borel--Cantelli lemma gives the first assertion.
+There is no assumption of independence between rows.
+
+For the converse, standardize to $\sigma=1$. The split at $n-1$ gives
+$f(Y_{0..n})\ge\tfrac12(n-1)n^{-1}
+(\varepsilon_n-\overline\varepsilon_{1:n-1})^2$.
+Choose $c<c'<1$. The independent events
+$\varepsilon_n^2>2c'\log n$ occur infinitely often, since their probabilities
+have divergent sum. The strong law gives
+$\overline\varepsilon_{1:n-1}\to0$; along these events the displayed gain
+exceeds $c\log n$ eventually.
+\end{proof}
+
+This distinguishes convergence in probability at the $\log\log n$ scale from
+eventual almost-sure correctness at the $\log n$ scale. The borderline
+coefficient $c=1$ is not classified by Proposition~\ref{prop:strong}.
+
+\section{Oracle equivalence and sharp statistical consequences}\label{sec:oracle}
+
+In this section impose the classical fixed-signal regime:
+\begin{equation}\label{eq:classical}
+K_n^\star=K^\star<\infty,\qquad
+\taus_j/n\to t_j,\quad 0=t_0<t_1<\cdots<t_{K^\star}=1,
+\qquad \theta_{k,n}=\theta_k,
+\end{equation}
+where $\theta_{k+1}\ne\theta_k$ and $\sigma>0$ is fixed.
+The oracle partition $\tol$ minimizes $Q(\tau)$ over all partitions with
+exactly $K^\star$ segments. ``Oracle'' refers only to knowing the count;
+its boundary locations and segment means are estimated from the data.
+
+\begin{lemma}[Oracle localization]\label{lem:oracle-tight}
+Under~\eqref{eq:classical},
+$\max_j|\widetilde\tau_j-\taus_j|=\Op(1)$.
+For $K^\star=1$ this is interpreted as an empty maximum.
+\end{lemma}
+The full argument, including the local likelihood expansion and its
+global localization input, is in Appendix~\ref{app:oracle}.
+
+\begin{lemma}[Feasibility after bounded endpoint errors]\label{lem:edited}
+Under~\eqref{eq:classical}, fix an integer $M\ge0$. For every deterministic
+interval with endpoints within $M$ of the endpoints of one true segment,
+\begin{equation}\label{eq:edited}
+f(Y_{a..b})-d_n\quad\text{is bounded above in probability},
+\end{equation}
+uniformly over this finite family of intervals.
+Consequently, if $\gamma_n-d_n\to\infty$, the oracle partition is valid
+with probability tending to one.
+\end{lemma}
+\begin{proof}
+Each interval has length proportional to $n$. Subtract its associated true
+segment level. Its deterministic mean vector is nonzero at at most $2M$
+observations, with uniformly bounded magnitudes. Write each contrast as
+$Z_u=N_u+L_u$, where $N_u$ is the pure-noise contrast on that interval and
+$L_u$ is its mean. The normalized contrast vector has Euclidean norm one,
+so $\sup_u|L_u|\le C_M$. If both sides of the split have length at least $h$,
+its coefficients have absolute values at most $h^{-1/2}$, giving
+$|L_u|\le C_M/\sqrt h$.
+
+Take $h_n=\lceil(\log\log n)^4\rceil$.
+For splits with both lengths at least $h_n$, Proposition~\ref{prop:DE} gives
+$\max_u|N_u|=\Op(\sqrt{\log\log n})$, hence uniformly
+$\tfrac12(N_u+L_u)^2\le\tfrac12N_u^2+\op(1)$.
+The at most $2h_n$ remaining splits have
+$\max|N_u|=\Op(\sqrt{\log(h_n+1)})$ by a Gaussian union bound.
+Their observed squared contrasts are $\Op(\log(h_n+1)+1)=\op(\log\log n)$.
+The pure-noise maximum on the whole interval equals
+$d_{b-a}+\Op(1)=d_n+\Op(1)$, proving~\eqref{eq:edited}.
+There are at most $K^\star(2M+1)^2$ intervals, so the bound is uniform.
+
+Lemma~\ref{lem:oracle-tight} puts all oracle endpoints in this family with
+probability arbitrarily close to one by choosing $M$ large, independently
+of $n$. For fixed $M$,~\eqref{eq:edited} and $\gamma_n-d_n\to\infty$ give
+validity with probability tending to one. Let $M\to\infty$ after $n\to\infty$.
+\end{proof}
+
+\begin{theorem}[Equality with the oracle estimator]\label{thm:oracle}
+Under~\eqref{eq:classical}, if
+\begin{equation}\label{eq:oracle-threshold}
+\gamma_n-d_n\to\infty,\qquad \gamma_n=o(n),
+\end{equation}
+then
+\begin{equation}\label{eq:oracle-equality}
+\Prob(\tht=\tol)\longrightarrow1.
+\end{equation}
+In particular, SVP has exactly the same asymptotic location and level
+distributions as least squares supplied with the true segment count.
+\end{theorem}
+\begin{proof}
+Theorem~\ref{thm:main} gives count recovery. Lemma~\ref{lem:edited} gives
+oracle feasibility. On their intersection, SVP minimizes $Q$ on a subset
+of the $K^\star$-segment partitions that contains the unrestricted minimizer.
+It therefore equals that minimizer, with the common tie convention.
+In fact the oracle minimizer is almost surely unique: for distinct
+$K$-segment partitions the orthogonal projections onto their piecewise
+constant subspaces are distinct. Equality of their residual sums of squares
+is the zero set of a nonzero quadratic polynomial in a Gaussian vector
+having a density. A finite union of these zero sets has probability zero.
+\end{proof}
+
+For explicit limits, put $\delta_j=(\theta_{j+1}-\theta_j)/\sigma$, including
+its sign. Let $\{\xi_{j,r}^{+},\xi_{j,r}^{-}:j=1,\ldots,K^\star-1,r\ge1\}$
+be independent standard normal variables. Define independent two-sided
+random walks, with $R_j(0)=0$, by
+\begin{equation}\label{eq:random-walk}
+R_j(h)=
+\begin{cases}
+\displaystyle\sum_{r=1}^{h}(\delta_j^2/2+\delta_j\xi_{j,r}^{+}),&h>0,\\[0.3em]
+\displaystyle\sum_{r=1}^{-h}(\delta_j^2/2-\delta_j\xi_{j,r}^{-}),&h<0.
+\end{cases}
+\qquad H_j=\argmin_{h\in\Z}R_j(h).
+\end{equation}
+Each walk tends to $+\infty$ in both directions almost surely, and its
+minimum is almost surely unique. Denote fitted SVP segment means by
+$\widehat\theta_k$ and its fitted mean vector by $\widehat\mu$.
+For limits involving indexed boundaries and levels, assign arbitrary
+values on $\{\Kh\ne K^\star\}$; this convention does not affect convergence
+in distribution or in probability.
+
+\begin{theorem}[Joint limits and empirical loss]\label{thm:limits}
+Under the assumptions of Theorem~\ref{thm:oracle},
+\begin{equation}\label{eq:joint-limit}
+\left((\widehat\tau_j-\taus_j)_{j<K^\star},
+\left(\frac{\sqrt{m_{k,n}}}{\sigma}(\widehat\theta_k-\theta_k)\right)_{k\le K^\star}\right)
+\Longrightarrow ((H_j)_{j<K^\star},(G_k)_{k\le K^\star}),
+\end{equation}
+where the $G_k$ are independent standard normal variables, independent of
+all the $H_j$. Moreover,
+\begin{equation}\label{eq:loss-limit}
+\frac{1}{\sigma^2}\sum_{i=1}^n(\widehat\mu_i-\mu_i)^2
+\Longrightarrow
+\sum_{k=1}^{K^\star}G_k^2+
+\sum_{j=1}^{K^\star-1}\delta_j^2|H_j|.
+\end{equation}
+Consequently, $\max_j|\widehat\tau_j-\taus_j|=\Op(1)$ and
+$n^{-1}\norm{\widehat\mu-\mu}^2=\Op(\sigma^2/n)$ for fixed $K^\star$.
+\end{theorem}
+\begin{proof}
+The oracle location limit and its joint independence from the normalized
+true-segment noise sums are proved in Appendix~\ref{app:oracle}.
+Bounded-in-probability endpoint errors alter each segment sum by $\Op(1)$
+and its length by $\Op(1)$. Since $m_{k,n}\asymp n$,
+\begin{equation}\label{eq:means-expansion}
+\widetilde\theta_k-\theta_k
+=\frac{\sigma}{m_{k,n}}\sum_{i=\taus_{k-1}+1}^{\taus_k}\varepsilon_i
++\Op(n^{-1}).
+\end{equation}
+For completeness, the $\Op(1)$ assertion is obtained by first restricting
+endpoint errors to a fixed $M$, taking the maximum over the finitely many
+involved boundary observations, and then letting $M\to\infty$.
+The normalized sums on disjoint true segments are exactly independent
+standard normals. This gives the level limit jointly with the location limit.
+
+On correctly assigned observations of true segment $k$, the sum of squared
+errors is $(m_{k,n}+\Op(1))(\widetilde\theta_k-\theta_k)^2$.
+At boundary $j$, exactly $|\widetilde\tau_j-\taus_j|$ observations are
+assigned to the neighboring level. Their contribution is
+$(\theta_{j+1}-\theta_j)^2|\widetilde\tau_j-\taus_j|+\op(1)$.
+The boundary neighborhoods are disjoint with probability tending to one.
+Summing proves the oracle version of~\eqref{eq:loss-limit}; apply
+Theorem~\ref{thm:oracle} to transfer all conclusions to SVP.
+These are distributional and stochastic-order statements; no convergence
+of expectations is inferred without uniform integrability.
+\end{proof}
+
+\begin{remark}[An information bound for exact localization]
+Even if both levels and the segment count are known, uniform exact
+localization is impossible at a fixed jump. Consider two models with a
+single boundary at $t$ and $t+1$, respectively, with the same levels on
+either side and standardized jump $\delta\ne0$. Their data laws differ in
+one Gaussian observation only. The minimal sum of the two testing errors
+is $2\Phi(-|\delta|/2)$, obtained by comparing that observation with the
+midpoint of the two levels. Any boundary estimator induces a test (choose
+the first model exactly when the estimate is $t$), and therefore
+\[
+\max\{\Prob_t(\widehat\tau\ne t),
+\Prob_{t+1}(\widehat\tau\ne t+1)\}\ge\Phi(-|\delta|/2)>0.
+\]
+Thus the nonvanishing integer location uncertainty in~\eqref{eq:joint-limit}
+reflects a statistical obstruction even in this simpler experiment.
+\end{remark}
+
+\begin{remark}[Exact recovery and F1]
+For a fixed nonzero jump, $\Prob(R_j(1)<0)=\Phi(-|\delta_j|/2)>0$, so
+$\Prob(H_j\ne0)>0$. Thus count consistency does not imply exact integer
+recovery. For a fixed integer matching tolerance $d\ge0$ and $K^\star\ge2$,
+the limiting expected F1 is
+\[
+\lim_{n\to\infty}\E[\mathrm{F1}_n(d)]
+=\frac{1}{K^\star-1}\sum_{j=1}^{K^\star-1}\Prob(|H_j|\le d).
+\]
+Indeed, with probability tending to one, the count is correct and the
+macroscopically separated boundaries can only match their corresponding
+true boundaries. Integer-valued convergence gives the displayed matching
+probabilities, and boundedness permits passage to expectations.
+If instead $d_n'\to\infty$, F1 tends to one in probability and in expectation.
+The notation $d_n'$ here is unrelated to the centering~\eqref{eq:centering}.
+\end{remark}
+
+\section{Relation with penalized least squares}\label{sec:coupling}
+
+\begin{proposition}[Exact comparison at a common threshold]\label{prop:coupling}
+Let $\widehat\tau^{\mathrm{OP}}$ minimize $Q(\tau)+\beta K(\tau)$, where
+$\beta=\gamma\ge0$. Every OP segment is $\gamma$-valid, and
+$\Kh\le\widehat K^{\mathrm{OP}}$. If the counts agree, the partitions agree
+under the common tie convention. Hence, for every statistic $T$ taking
+values in $[0,1]$,
+\begin{align}\label{eq:coupling}
+\E|T(\tht)-T(\widehat\tau^{\mathrm{OP}})|
+&\le\Prob(\tht\ne\widehat\tau^{\mathrm{OP}})\nonumber\\
+&\le\Prob(\Kh\ne K^\star)+\Prob(\widehat K^{\mathrm{OP}}\ne K^\star).
+\end{align}
+This proposition is deterministic apart from its final probability statement
+and holds for any additive cost whose split gains define the validity scan.
+\end{proposition}
+\begin{proof}
+If an OP segment had a split gain larger than $\beta$, splitting it would
+decrease $Q+\beta K$, a contradiction. OP is therefore feasible for SVP,
+which proves the count inequality. At equal counts, minimizing $Q$ first
+over all partitions and then over the valid subset containing the OP
+minimizer gives equality of costs and, with common tie resolution, of
+partitions. The probability bound and bounded-statistic comparison follow.
+\end{proof}
+
+At a sufficiently large common logarithmic threshold, known penalized
+least-squares consistency and Theorem~\ref{thm:main} imply asymptotic equality
+of the entire partitions. This is stronger than equality of F1 scores.
+In contrast, the sharp $\log\log n$ calibration of SVP does not require
+penalized least squares to be consistent at that same penalty.
+
+If OP uses residual sum of squares without the factor $1/(2\sigma^2)$,
+its matching penalty is $\beta_{\mathrm{RSS}}=2\sigma^2\gamma$.
+A result requiring a sufficiently large coefficient of $\log n$ does not
+by itself validate a particular BIC coefficient. Neither this coupling nor
+the null calibration in Section~\ref{sec:null} automatically applies to
+\texttt{right} or \texttt{both} subsegment tests.
+
+\section{Limits of the result and a variance extension}\label{sec:limits}
+
+\begin{proposition}[Cancellation on a central plateau]\label{prop:plateau}
+Let $n,m_n$ have the same parity, $0<m_n<n$, and
+$L_n=(n-m_n)/2$. Consider the three-segment mean vector
+\[
+\mu_i=\Delta\,\mathbf1\{L_n<i\le L_n+m_n\},\qquad \Delta\ne0.
+\]
+Its noiseless whole-series scan is exactly
+\begin{equation}\label{eq:plateau}
+f(\mu_{0..n})=
+\frac{\Delta^2m_n^2}{2\sigma^2n}\frac{n-m_n}{n+m_n}.
+\end{equation}
+If $\gamma_n\ge(1+\epsilon)\log\log n$ eventually for some $\epsilon>0$ and
+$\Delta^2m_n^2/(\sigma^2n)=o(\gamma_n)$, then
+$\Prob(\Kh=1)\to1$, although $K_n^\star=3$.
+Furthermore, if
+$\Delta^2m_n^2\log\log n/(\sigma^2n)\to0$, then
+$f(Y_{0..n})-d_n\Longrightarrow H$ with the same law as in~\eqref{eq:DE}.
+In this latter regime, every deterministic threshold satisfying
+$\gamma_n-d_n\to\infty$ yields $\Prob(\Kh=1)\to1$.
+\end{proposition}
+\begin{proof}
+Let $V_\mu(u)=\sum_{i=1}^u(\mu_i-\Delta m_n/n)$.
+Before the plateau $V_\mu(u)=-u\Delta m_n/n$, on the plateau
+$V_\mu(u)=\Delta(1-m_n/n)(u-n/2)$, and after it
+$V_\mu(u)=\Delta m_n(1-u/n)$.
+The squared standardized contrast is $nV_\mu(u)^2/(\sigma^2u(n-u))$.
+It increases up to $u=L_n$ before the plateau, is maximal at one of the
+two plateau endpoints within the plateau, and decreases after the plateau.
+Evaluation at either endpoint proves~\eqref{eq:plateau}.
+
+The triangle inequality for the maximum absolute contrast gives
+$\sqrt{f(Y_{0..n})}\le\sqrt{f(\sigma\varepsilon_{0..n})}
++\sqrt{f(\mu_{0..n})}$.
+Proposition~\ref{prop:DE} implies
+$f(\sigma\varepsilon_{0..n})/\log\log n\to1$ in probability.
+The assumptions leave a fixed multiplicative gap between the noise scan
+and $\gamma_n$, while $f(\mu)=o(\gamma_n)$.
+Thus the whole series is valid with probability tending to one, and SVP
+then selects its one-segment partition.
+For the last assertion, the reverse triangle inequality also gives
+\[
+|f(Y_{0..n})-f(\sigma\varepsilon_{0..n})|
+\le2\sqrt{f(\sigma\varepsilon_{0..n})f(\mu_{0..n})}+f(\mu_{0..n})=\op(1).
+\]
+Apply Proposition~\ref{prop:DE} and tightness.
+\end{proof}
+
+For example, take even $n$ and $m_n=2\lfloor n^{1/4}/2\rfloor$, with fixed
+$\Delta/\sigma\ne0$. Then
+$m_n\Delta^2/(\sigma^2\log n)\to\infty$, but plain SVP selects one segment
+at every deterministic threshold that is consistent under a constant mean.
+This is an analytic counterexample to consistency under only a local
+spacing--jump condition. A smaller threshold sufficient for null
+consistency does not eliminate this cancellation phenomenon.
+
+\begin{corollary}[A controlled plug-in variance]\label{cor:variance}
+Use a common positive estimate $\widehat\sigma_n^2$ in both cost and validity.
+Independence from the data is not required. The conclusions of
+Theorem~\ref{thm:main} remain true if its deterministic signal condition holds,
+$\widehat\sigma_n^2/\sigma^2\to1$ in probability, and
+\begin{equation}\label{eq:variance-margin}
+\gamma_n\left|\widehat\sigma_n^2/\sigma^2-1\right|
+=\op(\gamma_n-d_n),\qquad \gamma_n-d_n\to\infty.
+\end{equation}
+Under~\eqref{eq:classical} and $\gamma_n=o(n)$, the oracle results also hold.
+For $\gamma_n=(1+\epsilon)\log\log n$, ordinary variance consistency suffices.
+\end{corollary}
+\begin{proof}
+Multiplying all costs by one positive scalar does not change their ordering.
+Validity is equivalent to using the true $\sigma^2$ and the random effective
+threshold $\gamma_n\widehat\sigma_n^2/\sigma^2$.
+With probability tending to one this lies above
+$d_n+(\gamma_n-d_n)/2$ and below $2\gamma_n$.
+Use the lower deterministic threshold for true and oracle feasibility,
+and the upper one for exclusion of partitions missing a boundary.
+The proofs of Theorems~\ref{thm:main} and~\ref{thm:oracle} then apply unchanged.
+\end{proof}
+
+The variance corollary is conditional on properties of the estimate; it does
+not assume that a global sample variance is consistent under changes.
+No extension to dependent errors, arbitrary exponential families, or robust
+rank tests is asserted without corresponding probability bounds.
+
+\section{Multiscale validity with both subsegment tests}\label{sec:multiscale}
+
+The plateau in Proposition~\ref{prop:plateau} suggests testing smaller intervals
+inside a candidate segment. This avoids dilution by observations far from a
+change, but the enlarged family of tests needs its own calibration. We retain
+the Gaussian model~\eqref{eq:model}, the cost~\eqref{eq:cost}, and the
+lexicographic objective. Only validity changes. In this section write
+$\widehat\tau_n^{\mathrm{MS}}$ and $\widehat K_n^{\mathrm{MS}}$ for the new
+estimator and its segment count.
+
+\subsection{The effective length and the proposed threshold}
+
+For positive integers $l,r$ with $l+r\le n$, define
+\begin{equation}\label{eq:ms-scale}
+h(l,r)=\frac{lr}{l+r},\qquad
+p_n(l,r)=\sqrt{2\log\!\left(\frac{n(l+r)}{lr}\right)}.
+\end{equation}
+Here $h$ is the effective length of the two-sample contrast. It lies between
+$\min(l,r)/2$ and $\min(l,r)$, and $h\le n/4$.
+For $q\ge0$ and a candidate segment $(s,t]$, put
+\begin{equation}\label{eq:ms-statistic}
+T_n(Y;s,t)=\max_{s\le a<u<b\le t}
+\bigl\{|Z_u(a,b)|-p_n(u-a,b-u)\bigr\}.
+\end{equation}
+Set the maximum to $-\infty$ for a singleton. A segment is multiscale valid
+when $T_n(Y;s,t)\le q$, and $\widehat\tau_n^{\mathrm{MS}}$ minimizes $(K,Q)$
+over partitions into such segments, with the previous tie convention.
+In the units of~\eqref{eq:cost}, each split is therefore tested at
+\begin{equation}\label{eq:ms-penalty}
+\boxed{\displaystyle
+\gamma_n(l,r;q)=\frac12\left[
+\sqrt{2\log\!\left(\frac{n(l+r)}{lr}\right)}+q\right]^2.}
+\end{equation}
+This is a threshold for a split gain. The objective $Q$ receives no additional
+penalty. Since the threshold depends on the split, the correction must be
+applied before maximizing over $u$. Expanding the square gives
+$\gamma_n=\log(n/h)+q\sqrt{2\log(n/h)}+q^2/2$; dropping the cross term changes
+the calibration.
+
+The size $n$ in~\eqref{eq:ms-scale} is the full, fixed sample size, even when
+computing optimal partitions of prefixes. A balanced window with $l=r=r_0$
+has correction $\sqrt{2\log(2n/r_0)}$. Thus long balanced windows are tested
+at a lower threshold than short windows. A correction depending only on
+$l+r$ would leave the endpoint splits of a long interval uncorrected:
+on the full interval it would be constant, while the uncorrected maximum
+absolute CUSUM diverges at the $\sqrt{\log\log n}$ scale.
+
+\subsection{Simultaneous calibration and its sharp features}
+
+For $n=1$ the singleton partition is always selected. All finite-sample
+statements below concern $n\ge2$.
+For $n\ge2$ define the pure-noise maximum and its upper tail by
+\begin{equation}\label{eq:ms-null}
+M_n=T_n(\sigma\varepsilon;0,n),\qquad
+\alpha_n(q)=\Prob(M_n>q).
+\end{equation}
+The law does not depend on $\sigma$. The following is the only new imported
+probability estimate.
+
+\begin{lemma}[Simultaneous CUSUM control]\label{lem:ms-noise}
+There are universal positive constants $c_0,c_1$ such that, for every
+$n\ge2$ and $x>0$,
+\begin{equation}\label{eq:ms-tail}
+\Prob(M_n>c_0+c_1\sqrt{x})\le e^{-x}.
+\end{equation}
+In particular $M_n$ is uniformly bounded above in probability. For
+$0<\alpha<1$, let
+\begin{equation}\label{eq:ms-quantile}
+q_{n,\alpha}=
+\max\bigl\{0,\inf\{z\in\R:\Prob(M_n\le z)\ge1-\alpha\}\bigr\}.
+\end{equation}
+Then $\alpha_n(q_{n,\alpha})\le\alpha$ and
+$q_{n,\alpha}\le c_0+c_1\sqrt{\log(1/\alpha)}$.
+\end{lemma}
+\begin{proof}
+Apply \cite[Lemma 9, equation (79), p.~45 of the arXiv version]{verzelen2020}
+to the independent standard Gaussian errors. Its interval convention
+$[t_1,t_3)$ becomes ours under $(t_1,t_2,t_3)=(a+1,u+1,b+1)$.
+Their contrast has the opposite sign, which disappears after squaring.
+For $s=\log(n/h)\ge\log4$, that lemma bounds all squared noise contrasts,
+with probability at least $1-e^{-x}$, by
+\[
+2s+C_1\log(s+x)+C_2x+C_3.
+\]
+The constants can be increased to be positive. Since
+$\log(s+x)\le\log s+x/s$ and
+$\sup_{s\ge\log4}(\log s)/\sqrt{s}<\infty$, taking square roots and
+subtracting $\sqrt{2s}$ gives a bound $c_0+c_1\sqrt{x}$ uniformly in $s$.
+This is also the calibration stated in their equation (40), p.~24.
+The maximum in~\eqref{eq:ms-null} is over finitely many continuous Gaussian
+absolute contrasts, so its distribution has no atoms. The quantile claims
+follow, and clipping a negative quantile at zero can only reduce its tail.
+\end{proof}
+
+\begin{proposition}[Null consistency and the leading scale]\label{prop:ms-null}
+Under a constant mean, for every deterministic $q_n\ge0$,
+\begin{equation}\label{eq:ms-null-iff}
+\Prob(\widehat K_n^{\mathrm{MS}}=1)\to1
+\quad\Longleftrightarrow\quad q_n\to\infty.
+\end{equation}
+If instead all subinterval CUSUM gains are compared with the same scalar
+$\gamma_n$, their pure-noise maximum divided by $\log n$ tends to one in
+probability. Thus $\gamma_n=c\log n$ is null consistent for $c>1$ and
+selects extra segments with probability tending to one for $c<1$.
+Finally, replacing $p_n$ by $c p_n$, $0\le c<1$, in~\eqref{eq:ms-statistic}
+fails under the null whenever $q_n=o(\sqrt{\log n})$.
+\end{proposition}
+\begin{proof}
+The one-segment partition is selected exactly when $M_n\le q_n$.
+Sufficiency follows from Lemma~\ref{lem:ms-noise}. For necessity, use the
+single full-interval contrast at $u=\lfloor n/2\rfloor$. Its null law is
+standard normal and its correction is at most $2$. Consequently
+$\alpha_n(q_n)\ge2\Phi(-q_n-2)$, which stays positive on a subsequence if
+$q_n$ does not tend to infinity.
+
+For disjoint pairs of observations, the contrasts
+$Z_{2i-1}(2i-2,2i)$, $1\le i\le\lfloor n/2\rfloor$, are independent
+standard normals. Their maximum absolute value divided by
+$\sqrt{2\log n}$ tends to one: Gaussian tail bounds and a union bound give
+the upper bound, and the product of their acceptance probabilities gives
+the lower bound. On the other hand, $h\ge1/2$ for every integer split,
+so the maximum over all triples is at most
+$\sqrt{2\log(2n)}+(M_n)_+$.
+Lemma~\ref{lem:ms-noise} therefore gives the same limit for the full maximum.
+Squaring and dividing by two proves the scalar-threshold claim.
+For each disjoint pair, $p_n=\sqrt{2\log(2n)}$; the same independent maximum
+exceeds $c p_n+q_n$ with probability tending to one when $c<1$.
+\end{proof}
+
+A fixed significance level gives controlled overestimation, whereas count
+consistency requires an unbounded sequence $q_n$. For example, choosing
+$\alpha_n^\circ=1/\log(en)$ and $q_n=q_{n,\alpha_n^\circ}$ ensures vanishing
+null error and $q_n^2=O(\log\log(en))$. Slower divergence is also possible:
+any deterministic $q_n\to\infty$ suffices for the null, provided the signal
+conditions below hold. The constants in~\eqref{eq:ms-tail} are theoretical
+universal constants; they are not proposed numerical tuning values.
+
+For practical Gaussian calibration, simulate the maximum $M_n$ itself.
+An ordinary empirical quantile is an approximation to~\eqref{eq:ms-quantile}.
+Finite simulation error can be included explicitly: from $B$ independent
+replicates, use the $k$th order statistic, clipped at zero, where
+\[
+\Prob\{\operatorname{Bin}(B,1-\alpha)\ge k\}\le\eta.
+\]
+Then, with calibration probability at least $1-\eta$, its true null tail
+is at most $\alpha$. If no $k\le B$ satisfies this inequality, increase $B$.
+With simulations independent of the observations, the unconditional
+overestimation bound is at most $\alpha+\eta$. This recipe specifies
+calibration; no simulated value is used in the proofs.
+
+\subsection{Finite-sample recovery from local witnesses}
+
+The local argument now uses a window that is itself among the tested
+subintervals. It therefore has no factor depending on the size of the
+candidate segment containing that window.
+
+\begin{theorem}[Count and asymmetric localization]\label{thm:ms-finite}
+Fix $n$, $q\ge0$, and the model~\eqref{eq:model}; abbreviate
+$K=K_n^\star$ and suppress $n$ in the true lengths and jumps. Uniformly over
+all such signals,
+\begin{equation}\label{eq:ms-over}
+\Prob(\widehat K_n^{\mathrm{MS}}>K)\le\alpha_n(q).
+\end{equation}
+For $K\ge2$, choose positive integer window lengths $L_j,R_j$ satisfying
+\begin{equation}\label{eq:ms-windows}
+L_j\le m_j,\quad R_j\le m_{j+1},\qquad
+R_j+L_{j+1}\le m_{j+1}+1\quad(1\le j<K-1).
+\end{equation}
+Define the disjoint sets of possible boundaries
+$\mathcal N_j=(\taus_j-L_j,\taus_j+R_j)\cap\Z$, and put
+\begin{align}
+h_j&=\frac{L_jR_j}{L_j+R_j},\qquad
+A_j=\frac{\Delta_j\sqrt{h_j}}{\sigma},\qquad
+B_j=\sqrt{2\log(n/h_j)}+q,\label{eq:ms-AB}\\
+v_j&=\Phi(B_j-A_j)-\Phi(-B_j-A_j).
+\label{eq:ms-v}
+\end{align}
+Then
+\begin{align}
+\Prob(\widehat K_n^{\mathrm{MS}}<K)&\le\sum_{j=1}^{K-1}v_j,
+\label{eq:ms-under}\\
+\Prob\left(\widehat K_n^{\mathrm{MS}}=K,\
+\widehat\tau_{j,n}^{\mathrm{MS}}\in\mathcal N_j\ \text{for all }j<K\right)
+&\ge1-\alpha_n(q)-\sum_{j=1}^{K-1}v_j.
+\label{eq:ms-recovery}
+\end{align}
+Each $v_j\le\exp\{-(A_j-B_j)_+^2/2\}$. If the stronger inequalities
+$R_j+L_{j+1}\le m_{j+1}$ hold, the sums of $v_j$ in these two bounds
+can be replaced by $1-\prod_{j=1}^{K-1}(1-v_j)$.
+\end{theorem}
+\begin{proof}
+On $\{M_n\le q\}$ every subinterval of every true segment passes its
+test, since each such contrast has zero mean. The true partition is feasible;
+minimality of the count gives~\eqref{eq:ms-over}.
+
+If a partition contains no boundary in $\mathcal N_j$, the observations
+$(\taus_j-L_j,\taus_j+R_j]$ lie in a single one of its segments.
+Boundaries at the two window endpoints are allowed. Validity then requires
+\[
+|Z_{\taus_j}(\taus_j-L_j,\taus_j+R_j)|\le B_j.
+\]
+The two sides of this contrast have constant means and respective lengths
+$L_j,R_j$. After a possible sign change it has law $\mathcal N(A_j,1)$,
+so the probability of the displayed event is exactly $v_j$.
+Outside the union of these events, every valid partition contains at least
+one boundary in each $\mathcal N_j$. Condition~\eqref{eq:ms-windows} makes
+these integer sets disjoint, hence the count is at least $K$. This proves
+\eqref{eq:ms-under}. Intersecting with $\{M_n\le q\}$ gives equality of
+counts and exactly one boundary in each ordered neighborhood, proving
+\eqref{eq:ms-recovery}. No independence from the true-feasibility event
+is needed.
+
+If $A_j>B_j$, the acceptance event is contained in a standard Gaussian
+lower-tail event at $B_j-A_j$; its probability is at most
+$\exp\{-(A_j-B_j)^2/2\}$. For $A_j\le B_j$ use the bound one.
+Under the stronger spacing inequalities the observation windows are
+disjoint, so their acceptance events are independent and their union
+has probability $1-\prod_j(1-v_j)$.
+\end{proof}
+
+\begin{corollary}[A radius with prescribed confidence]\label{cor:ms-radius}
+Let $K\ge2$, $q=q_{n,\alpha}$, and $0<\beta<1$. Choose integer radii $r_j$
+with $1\le r_j\le\min(m_j,m_{j+1})$ and
+$r_j+r_{j+1}\le m_{j+1}+1$. If
+\begin{equation}\label{eq:ms-radius}
+\frac{\Delta_j}{\sigma}\sqrt{\frac{r_j}{2}}
+\ge \sqrt{2\log(2n/r_j)}+q+
+\sqrt{2\log((K-1)/\beta)}\qquad(j<K),
+\end{equation}
+then the count is correct and every ordered location error is less than
+$r_j$, simultaneously, with probability at least $1-\alpha-\beta$.
+\end{corollary}
+\begin{proof}
+Use $L_j=R_j=r_j$ in Theorem~\ref{thm:ms-finite}. Each tail bound is at
+most $\beta/(K-1)$.
+\end{proof}
+
+The smallest admissible radius can be found from the monotone inequality
+\eqref{eq:ms-radius}. A simpler sufficient inequality is
+\begin{equation}\label{eq:ms-radius-sufficient}
+\frac{r_j\Delta_j^2}{\sigma^2}
+\ge12\log(2n/r_j)+6q^2+12\log((K-1)/\beta),
+\end{equation}
+obtained by $(a+b+c)^2\le3(a^2+b^2+c^2)$.
+This yields the scale $\sigma^2/\Delta_j^2$ multiplied by local logarithmic
+and confidence terms, subject to the window spacing conditions. In
+comparison, the plain-SVP validity bound in Corollary~\ref{cor:radii}
+contains a term proportional to $\sigma\sqrt{n\gamma_n}/\Delta_n$.
+Both are guarantees obtained from validity alone; neither is the final
+fixed-signal oracle localization rate.
+
+\subsection{Consistency with short segments and shrinking jumps}
+
+\begin{theorem}[Local signal consistency]\label{thm:ms-consistency}
+Let $q_n\ge0$ be deterministic with $q_n\to\infty$. Suppose $K_n^\star\ge2$,
+$\ell_n\to\infty$, and, with $d_{j,n}=\min(m_{j,n},m_{j+1,n})$,
+\begin{equation}\label{eq:ms-local-snr}
+\min_{j<K_n^\star}
+\frac{d_{j,n}\Delta_{j,n}^2/\sigma^2}
+{\log(en/d_{j,n})+q_n^2+\log(K_n^\star+1)}\longrightarrow\infty.
+\end{equation}
+Then, for every $\eta>0$,
+\begin{equation}\label{eq:ms-relative}
+\Prob\left(\widehat K_n^{\mathrm{MS}}=K_n^\star,\quad
+\max_{j<K_n^\star}
+\frac{|\widehat\tau_{j,n}^{\mathrm{MS}}-\taus_j|}{d_{j,n}}<\eta\right)
+\longrightarrow1.
+\end{equation}
+For fixed $K^\star\ge2$ and $\ell_n\ge an$, it is sufficient that
+\begin{equation}\label{eq:ms-macro}
+q_n\to\infty,\qquad q_n^2=o(n\Delta_n^2/\sigma^2).
+\end{equation}
+For $K_n^\star=1$, the necessary and sufficient condition is simply
+$q_n\to\infty$.
+\end{theorem}
+\begin{proof}
+It suffices to take $0<\eta<1/2$. Choose
+$r_{j,n}=\lfloor\eta d_{j,n}\rfloor$. For all large $n$ these are positive
+and at least $\eta d_{j,n}/2$. Since both adjacent $d_{j,n}$ are at most
+their common segment length, their radii satisfy~\eqref{eq:ms-windows}.
+Let $D_{j,n}$ be the denominator in~\eqref{eq:ms-local-snr}, and let
+$E_n$ be the minimum ratio in that display. For the quantities in
+Theorem~\ref{thm:ms-finite}, there is a constant $C_\eta$ such that
+\[
+A_{j,n}^2\ge\frac{\eta}{4}E_nD_{j,n},\qquad
+B_{j,n}^2\le C_\eta D_{j,n}.
+\]
+The second inequality uses
+$\log(2n/r_{j,n})\le\log(en/d_{j,n})+\log(4/(e\eta))$.
+Since $E_n\to\infty$, eventually $B_{j,n}\le A_{j,n}/2$ uniformly in $j$.
+Thus
+\[
+\sum_{j<K_n^\star}v_{j,n}
+\le K_n^\star\exp\!\left\{-\frac{\eta E_n}{32}
+\bigl(q_n^2+\log(K_n^\star+1)\bigr)\right\}\longrightarrow0.
+\]
+Lemma~\ref{lem:ms-noise} gives $\alpha_n(q_n)\to0$.
+Theorem~\ref{thm:ms-finite} now proves~\eqref{eq:ms-relative}.
+In the fixed-count macroscopic regime, $D_{j,n}=O(1+q_n^2)$ and
+$d_{j,n}\ge an$, giving~\eqref{eq:ms-macro}. The no-change assertion is
+Proposition~\ref{prop:ms-null}.
+\end{proof}
+
+The condition $\ell_n\to\infty$ is used for the relative-error conclusion.
+Finite-sample Theorem~\ref{thm:ms-finite} also covers length-one segments:
+choosing $L_j=R_j=1$ gives $\mathcal N_j=\{\taus_j\}$ and an exact-recovery
+bound when the jumps are sufficiently large. The $+1$ in the integer
+spacing condition permits consecutive true boundaries in this case.
+
+For macroscopic segments, the correction at a local balanced window is
+bounded. There is consequently no compulsory $\log\log n$ factor in
+\eqref{eq:ms-macro}. The sequence $q_n$ must nevertheless be specified:
+no one prescribed diverging sequence adapts to every arbitrarily slowly
+diverging signal energy. For a fixed sequence, its squared size must remain
+small compared with the signal energy. Under fixed error probabilities,
+the finite-sample bounds apply with their stated nonvanishing error level.
+
+\subsection{Oracle equivalence and the meaning of faster convergence}
+
+\begin{theorem}[Multiscale oracle equivalence]\label{thm:ms-oracle}
+Under the fixed-signal regime~\eqref{eq:classical}, if
+$q_n\to\infty$ and $q_n^2=o(n)$, then
+\begin{equation}\label{eq:ms-oracle}
+\Prob(\widehat\tau_n^{\mathrm{MS}}=\tol)\longrightarrow1.
+\end{equation}
+The joint location, level and empirical-loss limits in
+Theorem~\ref{thm:limits} hold for multiscale SVP with the same limiting laws.
+\end{theorem}
+\begin{proof}
+Count consistency follows from Theorem~\ref{thm:ms-consistency} (or
+Proposition~\ref{prop:ms-null} when $K^\star=1$). We prove oracle feasibility
+separately. Fix $M\ge0$ and consider all intervals whose endpoints are
+within $M$ of the endpoints of a true segment. After subtracting that
+segment's level, each interval has a deterministic contamination vector
+supported on at most $2M$ observations. Under~\eqref{eq:classical} its
+Euclidean norm divided by $\sigma$ is at most a constant $C_M$.
+Every standardized contrast has coefficient vector of Euclidean norm one;
+Cauchy--Schwarz therefore gives, simultaneously for all these intervals,
+\[
+T_n(Y;a,b)\le M_n+C_M.
+\]
+Lemma~\ref{lem:ms-noise} and $q_n\to\infty$ make the right-hand side at
+most $q_n$ with probability tending to one for fixed $M$.
+Lemma~\ref{lem:oracle-tight} places the oracle endpoints in this family with
+probability arbitrarily close to one by taking $M$ large. Thus the oracle
+is multiscale feasible with probability tending to one. At the correct
+count, minimizing $Q$ over the valid subset containing its unrestricted
+minimizer gives~\eqref{eq:ms-oracle}. The oracle distributional results
+then transfer exactly as in Theorem~\ref{thm:limits}.
+\end{proof}
+
+This feasibility proof only needs a bounded contamination argument on the
+absolute-contrast scale. The endpoint-layer analysis needed for the
+second-order plain threshold disappears. The improvement is therefore
+both statistical and in the proof: weak or short changes satisfy less
+restrictive signal conditions, and the simultaneous validity argument is
+shorter. For fixed nonzero jumps on macroscopic segments, both estimators
+already attain $O_{\Prob}(1)$ error in observation indices, or
+$O_{\Prob}(n^{-1})$ after normalization. The information bound following
+Theorem~\ref{thm:limits} precludes a uniformly vanishing integer error at
+fixed jump size. We make no claim of a faster rate in that regime, nor of
+oracle equivalence throughout the shrinking-jump regime of
+Theorem~\ref{thm:ms-consistency}.
+
+\begin{corollary}[Recovery of the short plateau]\label{cor:ms-plateau}
+For the plateau of Proposition~\ref{prop:plateau}, suppose
+$m_n\to\infty$, $m_n=o(n)$, $q_n\to\infty$, and
+\begin{equation}\label{eq:ms-plateau}
+\log(en/m_n)+q_n^2=o(m_n\Delta^2/\sigma^2).
+\end{equation}
+Then $\widehat K_n^{\mathrm{MS}}=3$ with probability tending to one and
+both ordered location errors are $o_{\Prob}(m_n)$.
+In particular, the fixed-height plateau with $m_n\asymp n^{1/4}$ missed by
+plain SVP is recovered by multiscale SVP if $q_n^2=o(n^{1/4})$.
+\end{corollary}
+\begin{proof}
+For large $n$ both adjacent minimum lengths equal $m_n$ and $K^\star=3$.
+Apply Theorem~\ref{thm:ms-consistency}.
+\end{proof}
+
+The contrast on a balanced window of radius $r\le m_n$ around a plateau
+edge has squared mean $r\Delta^2/(2\sigma^2)$. Its signal therefore grows
+linearly in the window length, while the whole-series scan in
+\eqref{eq:plateau} has signal of order $m_n^2\Delta^2/(\sigma^2n)$.
+This calculation identifies the source of the gain without relying on a
+simulation or on a claim that the finite-sample constants are minimax optimal.
+
+\subsection{Hereditary validity, implementation and the relation to SMUCE}
+
+\begin{proposition}[Stability for both pruning rules]\label{prop:ms-pruning}
+For fixed $n$ and $q$, multiscale invalidity propagates from an interval to
+every interval containing it. The lexicographic dynamic program with this
+validity constraint therefore permits both the left and right validity
+pruning rules.
+\end{proposition}
+\begin{proof}
+If $[s,t]\subseteq[s',t']$, every triple tested in~\eqref{eq:ms-statistic}
+for $(s,t]$ is also tested for $(s',t']$, with exactly the same threshold.
+Thus $T_n(Y;s,t)\le T_n(Y;s',t')$. If an interval starting at boundary $s$
+fails at endpoint $t$, every later endpoint with the same start fails.
+Every older start at the same or any later endpoint also fails. Removing
+these transitions cannot remove a feasible partition. The additive cost
+and lexicographic optimal-substructure argument then give the exact
+optimizer over multiscale-valid partitions.
+\end{proof}
+
+Equivalently, use the base interval test
+\[
+g_n(Y_{a..b})=\max_{a<u<b}
+\{|Z_u(a,b)|-p_n(u-a,b-u)\}
+\]
+and enforce both subsegment rules. In a chronological implementation that
+introduces every possible start, examines surviving starts from newest to
+oldest, and deletes a failing start and all older starts, this realizes
+\eqref{eq:ms-statistic} without explicitly storing all subinterval maxima.
+Indeed, a failed subinterval is examined before any surviving interval
+that contains it. If its start was already deleted, an earlier failed
+subinterval has already invalidated every containing start. Induction over
+endpoints proves that the retained starts are precisely those whose current
+segments satisfy the aggregated constraint. This argument concerns the
+outer validity pruning; it requires exact evaluation of each base test.
+
+The present Gaussian implementation compares an uncorrected maximum split
+gain with a scalar \texttt{gamma}. Simply selecting
+\texttt{subtests = "both"} implements the scalar-threshold variant, whose
+null scale is described in Proposition~\ref{prop:ms-null}.
+To implement~\eqref{eq:ms-penalty}, the base validity test must account for
+both split lengths. Existing functional pruning inside a CUSUM routine
+must be justified again for this modified statistic. For an unstandardized
+RSS gain, the threshold is $2\sigma^2\gamma_n(l,r;q)$; for a half-RSS gain
+it is $\sigma^2\gamma_n(l,r;q)$.
+
+The global $n$ must remain fixed during a run. Replacing it by the length
+of the containing candidate segment changes the threshold of a fixed
+witness when that segment grows, so the preceding nesting proof would
+no longer apply. More effective outer pruning can reduce computation, but
+the new split-dependent base test also has a cost. Statistical consistency
+does not itself imply a runtime improvement.
+
+Finally, raw maximization of the Gaussian single-change GLR over
+subintervals is not the SMUCE statistic. In the Gaussian case, SMUCE
+constrains, for a common proposed segment level $\theta$, quantities of the
+form
+\begin{equation}\label{eq:smuce-distinction}
+\frac{\sqrt{|I|}}{\sigma}|\overline Y_I-\theta|
+-\sqrt{2\log(en/|I|)}
+\end{equation}
+over all intervals $I$ inside that segment, and uses likelihood optimized
+over the admissible levels~\cite{frick2014}. Our constraint compares two
+adjacent empirical means and uses the unconstrained segment-mean cost
+\eqref{eq:cost}. Both belong to multiscale minimum-count segmentation, but
+their feasible sets and secondary costs must be distinguished. An exact
+SVP--SMUCE identification requires SMUCE's own validity and constrained cost.
+
+\begin{table}[ht]
+\caption{Calibration and conclusions in the known-variance Gaussian model.
+The null scales in the first two rows are leading orders.}\label{tab:ms-comparison}
+\centering\small
+\begin{tabular}{@{}>{\raggedright\arraybackslash}p{0.20\linewidth}p{0.27\linewidth}p{0.46\linewidth}@{}}
+\toprule
+Validity rule & Null calibration & Main statistical conclusion\\
+\midrule
+Plain scan & $\gamma_n\sim\log\log n$, with a diverging margin above $d_n$
+& Macroscopic consistency; possible cancellation of short plateaus.\\[0.5em]
+Both, scalar threshold & $\gamma_n=c\log n$, $c>1$
+& Local windows are tested, but every scale pays the logarithmic threshold.\\[0.5em]
+Both, multiscale & $\gamma_n(l,r;q_n)$ from~\eqref{eq:ms-penalty}
+& Uniform overestimation control and local recovery bounds; $q_n\to\infty$
+for count consistency.\\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\appendix
+\section{Oracle localization and the local experiment}\label{app:oracle}
+
+For $K^\star=1$ the oracle partition has no estimated boundary, so localization
+is immediate. In the rest of this appendix suppose $K^\star\ge2$.
+We give details so that the oracle conclusions do not rest on an unexplained
+appeal to classical change-point asymptotics. The single imported localization
+input is the following special case of \cite[Theorem 3, pp.~1926--1927]{wang2020}:
+under~\eqref{eq:classical}, a sufficiently large residual-sum-of-squares penalty
+$C\sigma^2\log n$ yields the correct count and maximum boundary error at most
+$C'\log n$ with probability tending to one. Their Assumption 2 holds because
+$\Delta\sqrt{\ell_n}/\sigma\asymp\sqrt n$; their independent sub-Gaussian
+noise assumption includes~\eqref{eq:model}. Their count denotes changes;
+ours denotes segments. Their cost has no factor $1/(2\sigma^2)$.
+
+On the event that this penalized estimator selects $K^\star$ segments, it
+also minimizes $Q$ among all $K^\star$-segment partitions. Almost-sure
+uniqueness therefore implies equality with $\tol$. We obtain a deterministic
+$C_0<\infty$ such that
+\begin{equation}\label{eq:oracle-log}
+\Prob\left(\max_j|\widetilde\tau_j-\taus_j|\le C_0\log n\right)\to1.
+\end{equation}
+This use of penalized least squares is independent of SVP consistency.
+
+\subsection{Uniform profile-likelihood expansion}
+Let $h=(h_1,\ldots,h_{K^\star-1})\in\Z^{K^\star-1}$ with
+$\norm h_\infty\le b_n=\lceil C_0\log n\rceil$, and set $h_0=h_{K^\star}=0$.
+For large $n$, all resulting partitions $\taus+h$ are ordered and their
+boundary neighborhoods are disjoint.
+Let $I_k(h)=(\taus_{k-1}+h_{k-1},\taus_k+h_k]$ and define
+\[
+A_k(h)=\sum_{i\in I_k(h)}(Y_i-\theta_k),\qquad L_k(h)=|I_k(h)|,
+\qquad D_n(h)=\frac{1}{2\sigma^2}\sum_k\frac{A_k(h)^2}{L_k(h)}.
+\]
+Completing squares on each interval gives
+\begin{equation}\label{eq:profile}
+Q(\taus+h)-Q(\taus)
+=\sum_{j=1}^{K^\star-1}R_{j,n}(h_j)-\{D_n(h)-D_n(0)\},
+\end{equation}
+where the local walks are exactly
+\[
+R_{j,n}(h)=
+\begin{cases}
+\displaystyle\sum_{r=1}^{h}\left(\delta_j^2/2+
+\delta_j\varepsilon_{\taus_j+r}\right),&h>0,\\
+0,&h=0,\\
+\displaystyle\sum_{r=1}^{-h}\left(\delta_j^2/2-
+\delta_j\varepsilon_{\taus_j-r+1}\right),&h<0.
+\end{cases}
+\]
+For example, moving boundary $j$ to the right assigns observations of level
+$\theta_{j+1}$ to $\theta_j$; the per-observation cost difference in the
+units of~\eqref{eq:cost} is $\delta_j^2/2+\delta_j\varepsilon_i$.
+This verifies the signs and the factor of two.
+
+We have $A_k(0)=\Op(\sqrt n)$, uniformly over the fixed number of segments.
+By the maximal inequality for Gaussian partial sums over the finitely many
+boundary windows,
+\[
+\max_{k,\norm h_\infty\le b_n}|A_k(h)-A_k(0)|
+=\Op(b_n+\sqrt{b_n})=\Op(\log n),
+\quad
+\max_{k,h}|L_k(h)-L_k(0)|\le2b_n.
+\]
+The deterministic part of the first bound is the contribution of
+misassigned fixed levels. All lengths are at least a positive multiple of $n$.
+Expanding the squares and reciprocals therefore gives
+\begin{equation}\label{eq:uniform-remainder}
+\sup_{\norm h_\infty\le b_n}|D_n(h)-D_n(0)|
+=\Op\left(\frac{b_n}{\sqrt n}+\frac{b_n^2}{n}+\frac{b_n}{n}\right)=\op(1).
+\end{equation}
+
+\subsection{Argmin tightness and distribution}
+Within this box the walks $R_{j,n}$ are independent over $j$ and the two
+sides, and their joint law is exactly the restriction of the independent
+walks in~\eqref{eq:random-walk} to $[-b_n,b_n]$.
+For these infinite walks the strong law gives $R_j(h)\to+\infty$ as
+$h\to\pm\infty$. All differences between distinct walk values have
+nondegenerate continuous distributions. Hence $H_j$ exists and is unique
+almost surely. For the sum $\mathcal R(h)=\sum_jR_j(h_j)$ on
+$\Z^{K^\star-1}$, there is also a unique minimum at $H=(H_j)_j$ and a
+strictly positive random gap to the second smallest value: every bounded
+sublevel set is finite, because each summand is bounded below and tends
+to $+\infty$ at both ends.
+
+As $b\to\infty$, the minimizer and the gap on $[-b,b]^{K^\star-1}$ agree
+eventually with the unrestricted ones, almost surely.
+For any fixed $\eta>0$, the probability that the finite-box gap is at most
+$\eta$ thus approaches the corresponding probability for the infinite gap;
+the latter tends to zero as $\eta\downarrow0$.
+The uniform perturbation~\eqref{eq:uniform-remainder} therefore changes the
+minimizer with probability tending to zero. Combining with
+\eqref{eq:oracle-log} gives
+\begin{equation}\label{eq:oracle-walk-limit}
+(\widetilde\tau_j-\taus_j)_{j<K^\star}\Longrightarrow(H_j)_{j<K^\star},
+\end{equation}
+and proves Lemma~\ref{lem:oracle-tight}. This gap argument requires neither
+independence of the profile remainder nor a continuous-parameter argmin theorem.
+
+\subsection{Independence from level estimates}
+Fix $M$. The walks restricted to $[-M,M]$ involve finitely many observations
+near the true boundaries. Delete these observations from the normalized
+true-segment sums. The remaining sums are independent of the local walks
+and converge jointly to independent standard normals; deletion changes each
+normalized sum by $\op(1)$. Thus the truncated walk minimizers and the
+level sums have independent limits. The probability that any full walk
+minimizer lies outside $[-M,M]$ tends to zero as $M\to\infty$.
+The perturbation and localization arguments above transfer this statement
+to the oracle estimator. Taking $n\to\infty$ and then $M\to\infty$ proves
+the joint independence used in Theorem~\ref{thm:limits}.
+
+\section{Comparison with the earlier consistency note}\label{app:comparison}
+
+The earlier companion note establishes count consistency for fixed jumps
+and $\ell_n\asymp n$ at $\gamma_n=c\log n$, $c>1$.
+The principal differences are as follows.
+\begin{enumerate}
+\item The Gaussian dependence structure supplies the $\log\log n$ null
+scale and its necessary second-order correction. Treating the splits as
+unrelated tests obscures this scale.
+\item Local windows around the true changes give a single finite-sample
+event excluding every missing-boundary partition. There is no factor $n^3$
+from a union over candidate triples, and the jump signs cause no ambiguity.
+\item Count, localization, oracle equality, level inference, and empirical
+loss have separate statements with their respective assumptions.
+\item OP equivalence is a consequence of correct counts and common cost
+units. The inequality is $K^{\mathrm{SVP}}\le K^{\mathrm{OP}}$; the earlier
+note's introductory reference to SVP using strictly more segments has the
+direction reversed. A sufficiently large logarithmic penalty is not a
+theorem for every named BIC convention.
+\item The central plateau explicitly rules out an unjustified extension
+from macroscopic segments to arbitrary local spacing--jump regimes.
+\item The multiscale extension in Section~\ref{sec:multiscale} repairs this
+failure by changing validity. It imports a simultaneous CUSUM inequality
+and derives explicit SVP recovery bounds, a local signal consistency theorem,
+and a simpler fixed-signal oracle-feasibility proof. Its tuning parameter
+$q$ is on the absolute-contrast scale and is different from the ordinary
+GLR threshold $\gamma$.
+\end{enumerate}
+The finite-sample constants in the local-window bounds are explicit but
+not claimed optimal. Sharpness is established for the null threshold and
+the fixed-signal location scale; it is not a claim of uniform minimax
+optimality of plain SVP. The proofs are mathematical arguments, not
+machine-checked formalizations, and no priority claim is made.
+
+\begin{thebibliography}{9}
+\bibitem{torgovitski2016}
+L.~Torgovitski.
+\newblock A Darling--Erd\H{o}s-type CUSUM-procedure for functional data II.
+\newblock arXiv:1407.3625v2, 2016.
+\newblock \url{https://arxiv.org/abs/1407.3625}.
+\bibitem{wang2020}
+D.~Wang, Y.~Yu and A.~Rinaldo.
+\newblock Univariate mean change point detection: penalization, CUSUM and optimality.
+\newblock \emph{Electronic Journal of Statistics}, 14(1):1917--1961, 2020.
+\newblock \url{https://doi.org/10.1214/20-EJS1710}.
+\bibitem{verzelen2020}
+N.~Verzelen, M.~Fromont, M.~Lerasle and P.~Reynaud-Bouret.
+\newblock Optimal change-point detection and localization.
+\newblock \emph{Annals of Statistics}, 51(4):1586--1610, 2023.
+\newblock \url{https://doi.org/10.1214/23-AOS2297}.
+\newblock Detailed statements and proofs cited here use arXiv:2010.11470v2,
+2020, \url{https://arxiv.org/abs/2010.11470v2}.
+\bibitem{frick2014}
+K.~Frick, A.~Munk and H.~Sieling.
+\newblock Multiscale change point inference.
+\newblock \emph{Journal of the Royal Statistical Society: Series B},
+76(3):495--580, 2014.
+\newblock \url{https://doi.org/10.1111/rssb.12047}.
+\end{thebibliography}
+\end{document}

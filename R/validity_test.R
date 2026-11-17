@@ -4,17 +4,16 @@
 #' FOCuS Validity Test for Every Prefix
 #'
 #' @title FOCuS Validity Test for Every Prefix
-#' @description Tests whether the FOCuS statistic remains below `gamma` for
+#' @description Tests whether the FOCuS statistic remains at most `gamma` for
 #' every prefix of the segment. It is the prefix-wise validity rule available
 #' for use with [svp0()].
 #' @param y A numeric vector representing a segment of the signal.
 #' @param gamma A numeric threshold for the FOCuS statistic.
-#' @return `TRUE` if the statistic is strictly below `gamma` for every prefix
-#' of `y`; otherwise, `FALSE`.
+#' @return `TRUE` if the statistic is less than or equal to `gamma` for every
+#' prefix of `y`; otherwise, `FALSE`.
 #' @details `valid_FOCUS()` updates the FOCuS statistic after each observation
-#' and returns `FALSE` as soon as a prefix statistic reaches or exceeds
-#' `gamma`. Use it with [svp0()] when every prefix must be valid. In contrast,
-#' [SVP()] with `test = "gaussian_mean"` checks only the statistic at the
+#' and returns `FALSE` as soon as a prefix statistic exceeds `gamma`. Use it
+#' with [svp0()] when every prefix must be valid. In contrast, [SVP()] with `test = "gaussian_mean"` checks only the statistic at the
 #' current segment endpoint, and [valid_FOCUS_last()] checks only the final
 #' statistic of a supplied segment.
 #' @examples
@@ -22,7 +21,7 @@
 #' data <- ts_generator(
 #'   chpts = 40, parameters = 0, sd_noise = 1, type = "gauss"
 #' )
-#' valid_FOCUS(data, gamma = 2 * log(length(data)))
+#' valid_FOCUS(data, gamma = 4 * log(length(data)))
 #' @seealso [valid_FOCUS_last()]
 #' @export
 valid_FOCUS <- function(y, gamma) {
@@ -34,21 +33,21 @@ valid_FOCUS <- function(y, gamma) {
 #'
 #' @title FOCuS Validity Test for the Final Segment
 #' @description Tests whether the FOCuS statistic for the complete segment is
-#' below `gamma`, without checking intermediate prefixes.
+#' at most `gamma`, without checking intermediate prefixes.
 #' @param y A numeric vector representing a segment of the signal.
 #' @param gamma A numeric threshold for the FOCuS statistic.
-#' @return `TRUE` if the final statistic is strictly below `gamma`; otherwise,
-#' `FALSE`.
+#' @return `TRUE` if the final statistic is less than or equal to `gamma`;
+#' otherwise, `FALSE`.
 #' @details `valid_FOCUS_last()` processes the complete segment and checks only
-#' the final statistic. An earlier prefix may have reached or exceeded `gamma`
-#' without making the final segment invalid. Use [valid_FOCUS()] to require
+#' the final statistic. An earlier prefix may have exceeded `gamma` without
+#' making the final segment invalid. Use [valid_FOCUS()] to require
 #' every prefix to remain valid.
 #' @examples
 #' set.seed(1)
 #' data <- ts_generator(
 #'   chpts = 40, parameters = 0, sd_noise = 1, type = "gauss"
 #' )
-#' valid_FOCUS_last(data, gamma = 2 * log(length(data)))
+#' valid_FOCUS_last(data, gamma = 4 * log(length(data)))
 #' @seealso [valid_FOCUS()]
 #' @export
 valid_FOCUS_last <- function(y, gamma) {
@@ -91,13 +90,13 @@ valid_FOCUS_last <- function(y, gamma) {
 #' @param profile_sigma If `TRUE`, estimate the innovation variance separately
 #' under the no-change and one-change models from their residual sums of
 #' squares. This is useful when the innovation scale is unknown.
-#' @return `TRUE` if the AR(1) statistic is strictly below `gamma`; otherwise,
-#' `FALSE`.
+#' @return `TRUE` if the AR(1) statistic is less than or equal to `gamma`;
+#' otherwise, `FALSE`.
 #' @details The function conditions on the first observation, transforms the
 #' remaining observations into AR(1) innovations, and scans change locations
 #' that leave at least two observations on each side.
-#' The statistic is one half of the Gaussian likelihood-ratio statistic, using
-#' the same convention as [AR1_single_change()]. If `rho` is `NA`, the robust
+#' The known-variance statistic is the full RSS reduction divided by `sigma2`,
+#' using the same convention as [AR1_single_change()]. If `rho` is `NA`, the robust
 #' estimator requires at least three observations. The function can be passed
 #' to [svp0()] directly when `rho` is fixed, or through a closure when other
 #' optional arguments are needed. The caller should enforce any minimum segment
@@ -111,7 +110,7 @@ valid_FOCUS_last <- function(y, gamma) {
 #'   chpts = 60, parameters = 0, sd_noise = 1,
 #'   rho = 0.6, type = "gaussAR1"
 #' )
-#' valid_AR1(data, gamma = 10, rho = 0.6, sigma2 = 1)
+#' valid_AR1(data, gamma = 20, rho = 0.6, sigma2 = 1)
 #' @seealso [AR1_single_change()], [svp0()]
 #' @export
 valid_AR1 <- function(y, gamma, rho = NA_real_, sigma2 = 1,
@@ -139,7 +138,7 @@ valid_AR1 <- function(y, gamma, rho = NA_real_, sigma2 = 1,
 
   n <- length(y)
   if (n < 4L) {
-    return(0 < gamma)
+    return(0 <= gamma)
   }
 
   innovations <- y[-1L] - rho * y[-n]
@@ -165,7 +164,7 @@ valid_AR1 <- function(y, gamma, rho = NA_real_, sigma2 = 1,
   determinant <- a * d - b^2
   eligible <- determinant > .Machine$double.eps
   if (!any(eligible)) {
-    return(0 < gamma)
+    return(0 <= gamma)
   }
   fitted <- (d[eligible] * v1[eligible]^2 -
     2 * b * v1[eligible] * v2[eligible] +
@@ -176,14 +175,14 @@ valid_AR1 <- function(y, gamma, rho = NA_real_, sigma2 = 1,
     if (rss0 > 0 && rss1 <= .Machine$double.eps * rss0) {
       Inf
     } else if (rss1 > 0 && rss0 > rss1) {
-      0.5 * transition_count * log(rss0 / rss1)
+      transition_count * log(rss0 / rss1)
     } else {
       0
     }
   } else {
-    max(0, (rss0 - rss1) / (2 * sigma2))
+    max(0, (rss0 - rss1) / sigma2)
   }
-  statistic < gamma
+  statistic <= gamma
 }
 
 ################################################
@@ -363,5 +362,5 @@ valid_OP <- function(y, gamma) {
   right_sse <- (prefix_sq_sum[len + 1L] - prefix_sq_sum[split + 1L]) -
     right_sum^2 / (len - split)
   val <- min(left_sse + right_sse)
-  total < (val + 2 * gamma)
+  total < (val + gamma)
 }

@@ -1,5 +1,8 @@
 #include "svp_ar1_helpers.h"
 #include "svp_internal.h"
+#include "svp_verzelen.h"
+#include "svp_consistency_sharp.h"
+#include "svp_tests_empirical_both.h"
 #include "validity_tests.h"
 #include <Rcpp.h>
 #include <vector>
@@ -119,6 +122,8 @@ TestKind parse_test_kind(const std::string& test)
 //' * `"varCost"`: online within-segment variance statistic.
 //' * `"WilcoxonCost"`: maximum Wilcoxon statistic over possible splits.
 //' * `"MedianMoodCost"`: maximum Median-Mood statistic over possible splits.
+//' For Gaussian means, `subtests = "both_msl"`, `"both_ms_refined"`, and
+//' `"both_focus_lil"` apply the `"both"` pruning rule to multiscale tests.
 //'
 //' ## Per-candidate update complexity
 //'
@@ -132,6 +137,8 @@ TestKind parse_test_kind(const std::string& test)
 //' | Test | State update | Update and endpoint validity check |
 //' |---|---:|---:|
 //' | `"gaussian_mean"` | amortized `O(1)`, worst `O(m)` | expected `O(log m)`, worst `O(m)` |
+//' | `"gaussian_mean"`, `"both_focus_lil"` | amortized `O(1)`, worst `O(m)` | exact FOCUS maximum, expected `O(log m)`, worst `O(m)` |
+//' | `"gaussian_mean"`, `"both_msl"` or `"both_ms_refined"` | amortized `O(1)`, worst `O(m)` | FOCUS bound, exact `O(m)` scan if needed |
 //' | `"gamma_rate"` | `O(a_m)`, worst `O(m)` | `O(a_m)`, worst `O(m)` |
 //' | `"gaussian_variance"` | `O(a_m)`, worst `O(m)` | `O(a_m)`, worst `O(m)` |
 //' | `"AR1"` | `O(1)` | `O(m)` |
@@ -221,16 +228,147 @@ TestKind parse_test_kind(const std::string& test)
 //' monotonicity properties. For an arbitrary user-defined rule, use
 //' "none" unless those properties have been established.
 //'
+//' ## Verzelen multiscale validity
+//'
+//' With `test = "gaussian_mean", subtests = "verzelen"`, a standalone
+//' scanner tests every pair of adjacent nonempty intervals contained in the
+//' candidate segment. Write \eqn{N} for the full data length and
+//' \eqn{C(a,b,c)=\sqrt{(b-a)(c-b)/(c-a)}
+//' (\bar y_{a+1:b}-\bar y_{b+1:c})}. The candidate \eqn{(s,t]} is valid iff
+//' \deqn{V_s(t)=\max_{s\le a<b<c\le t}\left\{
+//' C(a,b,c)^2/(4\sigma^2)-2\log\left(\frac{N(c-a)}{(b-a)(c-b)}\right)
+//' \right\}\le\gamma.}
+//' Singleton segments have statistic minus infinity and are always valid.
+//' The global length \eqn{N} stays fixed when testing shorter segments.
+//' Each candidate maintains its current maximum, updated using
+//' \eqn{V_s(t)=\max\{V_s(t-1),V_{s+1}(t),H(s,t)\}}, where \eqn{H}
+//' scans the splits with outer boundaries \eqn{s,t}. Containment justifies
+//' permanent pruning in both directions. FOCUS bounds skip scans that cannot
+//' improve the maximum; all splits are checked otherwise. Worst-case total
+//' time is cubic in \eqn{N}, with quadratic worst-case state storage.
+//'
+//' This rule is inspired by the simultaneous CUSUM noise bound on slide 15
+//' (PDF page 38) of Nicolas Verzelen's 2023 workshop presentation
+//' \emph{Optimal multiple change-point detection and Localization}.
+//' It implements the bound with factor 4 and known noise variance `sigma2`.
+//' A finite negative `gamma` is allowed for empirical null calibration; such
+//' thresholds do not inherit the slide's positive-parameter probability bound.
+//' `gamma` is a direct threshold, not a multiplier of `log(N)`.
+//'
+//' ## MS-l multiscale validity
+//'
+//' With `test = "gaussian_mean", subtests = "both_msl"`, write \eqn{\ell}
+//' for an interval length, \eqn{r} for the shorter side of a split, and
+//' \eqn{Z} for its Gaussian two-sample CUSUM. The interval passes when
+//' \deqn{\max_{\tau}\left\{|Z_{\tau}|/\sqrt{\sigma^2}
+//' -\sqrt{2\log(e\ell/r_{\tau})}\right\}\leq\gamma.}
+//' The "both" pruning rule makes a candidate segment valid only when every
+//' contained interval passes. Singletons are always valid. `gamma` is the
+//' direct threshold \eqn{q}, without a `log(n)` multiplier.
+//' The FOCUS maximum bounds the penalized scan; any split that could exceed
+//' the threshold is checked exactly.
+//' With `subtests = "both_ms_refined"`, the penalty is instead
+//' \deqn{\sqrt{2\{1+\log(\ell/r_\tau)+\tfrac12\log(n/\ell)\}},}
+//' where \eqn{n} is the full data length. This fixed setting was selected in
+//' `simulations/power_gaussian_ms_search` with a separate 1% null calibration
+//' and paired F1-curve comparison. For \eqn{n=1000} and \eqn{\sigma^2=1},
+//' the calibrated direct threshold is \eqn{q=2.70947832002059}.
+//'
+//' ## FOCUS iterated-logarithm CUSUM
+//'
+//' With `subtests = "both_focus_lil"`, each interval of length \eqn{m}
+//' uses an envelope of the position penalty of Verzelen et al. (2023,
+//' Eq. 12). For a split with side lengths \eqn{l} and \eqn{r=m-l}, put
+//' \deqn{h_m(l)=\max\{\min(l,m/l),\min(r,m/r)\},\quad
+//' p_m(l)=2\log\log(e h_m(l)).}
+//' Its maximum over splits is attained near \eqn{\sqrt m}:
+//' \deqn{h_m^*=\max\{\lfloor\sqrt m\rfloor,
+//' m/\lceil\sqrt m\rceil\}.}
+//' The interval statistic is
+//' \deqn{\max_l Z_l^2/\sigma^2-8\log\log(eh_m^*).}
+//' FOCUS computes this maximum exactly because the penalty depends only on
+//' interval length. This statistic is no larger than the penalized maximum
+//' in Proposition 2 with its permitted \eqn{L=2}, so that proposition's
+//' single-interval level bound also applies here. A candidate segment is
+//' valid when every contained interval has statistic at most `gamma`.
+//' The proposition does not directly cover the SVP scan across contained
+//' intervals; calibrate `gamma` from the whole-series null maximum for the
+//' intended data length and noise model.
+//'
+//' ## Minimum-arm restricted validity
+//'
+//' With `subtests = "both_rmin"`, the interval statistic is the same
+//' two-sample squared CUSUM \eqn{Z_\tau^2/\sigma^2} used by plain `"both"`,
+//' but the scan skips every split whose shorter arm \eqn{r_\tau} is below
+//' \eqn{r_{\text{eff}}(m)=\max(r_{\min},\lceil\text{r\_min\_frac}\times
+//' m\rceil)} for an interval of current length \eqn{m}:
+//' \deqn{\max_{\tau:\,r_\tau\geq r_{\text{eff}}(m)}
+//' Z_\tau^2/\sigma^2\leq\gamma.} An interval shorter than
+//' \eqn{2\,r_{\text{eff}}(m)} has no eligible split and is always valid.
+//' Excluded splits are dropped from the scan rather than down-weighted,
+//' unlike `"both_msl"` or `"both_ms_refined"`: this removes the short-scale
+//' tests that otherwise dominate the null maximum of a constant threshold,
+//' so `gamma` can be calibrated smaller for the same false-detection rate.
+//' The absolute floor `r_min` matters most for short intervals; the
+//' relative floor `r_min_frac` (zero by default) additionally excludes
+//' lopsided splits of long intervals, whose shorter arm is short only
+//' relative to the interval. The cost is that a change cannot be resolved
+//' within \eqn{r_{\text{eff}}} observations of either end of its segment.
+//' `gamma` is a direct threshold on \eqn{Z_\tau^2}, without a `log(n)`
+//' multiplier.
+//'
+//' ## Multiscale CUSUM validity with a simultaneous bound
+//'
+//' With `subtests = "both_correction"`, a candidate segment \eqn{(s,t]} is valid
+//' iff every contained sub-interval passes a length-corrected two-sample
+//' CUSUM test:
+//' \deqn{T_n(s,t)=\max_{s\le a<u<b\le t}\left\{|Z_u(a,b)|-p_n(u-a,b-u)\right\}
+//' \leq\gamma,\qquad p_n(l,r)=\sqrt{2\log\!\left(\frac{n(l+r)}{lr}\right)},}
+//' with \eqn{Z_u(a,b)} the standardized two-sample CUSUM comparing
+//' \eqn{y_{a+1:u}} to \eqn{y_{u+1:b}} and \eqn{n} the TOTAL series length,
+//' fixed for the whole run (never the length of the candidate segment being
+//' tested). `gamma` (`q` in the source) is a direct threshold on the
+//' \eqn{|Z|} scale, not a `log(n)` multiplier. This is the multiscale "both"
+//' construction of `simulations/consistency/SVP_consistency_sharp.tex`,
+//' Section 6: the same every-sub-interval scan as `subtests = "verzelen"`
+//' (same contrast, same containment argument for exact "both" pruning), but
+//' with the penalty \eqn{p_n(l,r)} in place of Verzelen's squared,
+//' \eqn{\log(N(c-a)/((b-a)(c-b)))}-penalized statistic. Calibrate `gamma`
+//' by simulating the null maximum \eqn{T_n} and taking its empirical
+//' \eqn{1-\alpha} quantile (`simulations/power_gaussian/
+//' calibrate_consistency_sharp.R`); the paper's simultaneous CUSUM bound
+//' keeps this null maximum bounded in probability, so `gamma` need not grow
+//' with `n`. Worst-case total time is cubic in the series length, with a
+//' FOCUS-based bound skipping scans that cannot improve the running maximum.
+//'
 //' @param data Numeric vector containing the univariate series. Missing or
 //'   non-finite values are not supported.
-//' @param gamma Positive finite scalar validity threshold. A larger value
+//' @param gamma Finite scalar validity threshold, positive except when
+//'   `subtests` is `"verzelen"`, `"both_msl"`, `"both_ms_refined"`,
+//'   `"both_focus_lil"`, `"both_rmin"`, `"both_calibrated"`,
+//'   `"both_correction"`, `"both_empirical"`, `"both_lengthonly"`,
+//'   `"both_mosum_sqrt"`, or `"both_mosum_adaptive"`. A larger value
 //'   generally accepts longer or less homogeneous segments.
 //' @param test Character scalar selecting one of the validity tests listed in
 //'   Details. Defaults to `"gaussian_mean"`.
 //' @param subtests Character scalar selecting the validity-pruning rules:
-//'   "both" (default), "right", or "none".
+//'   "both" (default), "right", "none", "verzelen", "both_msl",
+//'   "both_ms_refined", "both_focus_lil", "both_rmin", "both_calibrated",
+//'   "both_correction", "both_empirical", "both_lengthonly", "both_mosum_sqrt",
+//'   "both_mosum", or "both_mosum_adaptive". The last eleven
+//'   options select multiscale, minimum-arm-restricted, length-adaptive, or
+//'   moving-sum (MOSUM) Gaussian tests; `"both_mosum"` is the MOSUM scan at
+//'   its maximal bandwidth (the segment's own midpoint, a single fixed
+//'   split), `"both_mosum_sqrt"` the same scan at a smaller,
+//'   length-growing bandwidth, and `"both_mosum_adaptive"` the
+//'   length-adaptive-threshold version of `"both_mosum"`.
 //' @param sigma2 Positive finite innovation variance for fixed-variance AR1
-//'   tests (`"AR1"` with `profile_sigma = FALSE`, and `"AR1Focus"`).
+//'   tests (`"AR1"` with `profile_sigma = FALSE`, and `"AR1Focus"`), or
+//'   known observation noise variance for `subtests = "verzelen"`,
+//'   `"both_msl"`, `"both_ms_refined"`, `"both_focus_lil"`, `"both_rmin"`,
+//'   `"both_calibrated"`, `"both_correction"`, `"both_empirical"`,
+//'   `"both_lengthonly"`, `"both_mosum_sqrt"`, `"both_mosum"`, and
+//'   `"both_mosum_adaptive"` (default 1).
 //'   It is the conditional/error variance of the new AR(1) shock, not the
 //'   marginal variance of the observed series. It is used when the variance is
 //'   fixed. It is ignored by `"AR1Profile"` and by `"AR1"` when
@@ -250,6 +388,13 @@ TestKind parse_test_kind(const std::string& test)
 //'   partitions with the same number of segments: `"auto"` (default),
 //'   `"gaussian"`, or `"ar1"`. See Details. `"ar1"` uses `rho`, estimating it
 //'   from the full series with [AR1_rho()] when it is `NA`.
+//' @param r_min Positive integer absolute minimum arm length for
+//'   `subtests = "both_rmin"`. Ignored by every other `subtests` value.
+//' @param r_min_frac Finite scalar in `[0, 0.5)`, the minimum arm length for
+//'   `subtests = "both_rmin"` as a fraction of the interval's current
+//'   length, combined with `r_min` by taking the larger of the two floors.
+//'   Zero (default) disables the relative floor. Ignored by every other
+//'   `subtests` value.
 //'
 //' @return A list with "changepoints" (the inclusive end of every segment,
 //'   including "length(data)"), "lastIndexSet" (zero-based candidate boundaries
@@ -267,7 +412,7 @@ TestKind parse_test_kind(const std::string& test)
 //'   chpts = c(20, 40, 60), parameters = c(0, 2, -1),
 //'   sd_noise = 1, type = "gauss"
 //' )
-//' SVP(gaussian_data, gamma = 2 * log(length(gaussian_data)),
+//' SVP(gaussian_data, gamma = 4 * log(length(gaussian_data)),
 //'     test = "gaussian_mean")$changepoints
 //'
 //' # Gamma rate: positive exponential observations with changing rates.
@@ -312,7 +457,7 @@ TestKind parse_test_kind(const std::string& test)
 //'   chpts = c(20, 40, 60), parameters = c(0, 2, -1),
 //'   sd_noise = 0.8, rho = 0.7, type = "gaussAR1"
 //' )
-//' SVP(ar1_data, gamma = 2 * log(length(ar1_data)), test = "AR1",
+//' SVP(ar1_data, gamma = 4 * log(length(ar1_data)), test = "AR1",
 //'     rho = 0.7, sigma2 = 0.8^2)$changepoints
 //'
 //' # Exact AR(1) with the innovation variance profiled out.
@@ -341,7 +486,12 @@ List SVP(std::vector<double> data,
          double rho = NA_REAL,
          bool profile_sigma = false,
          double quantile = 0.01,
-         std::string cost = "auto")
+         std::string cost = "auto",
+         int r_min = 1,
+         double r_min_frac = 0.0,
+         double abc_A = NA_REAL,
+         double abc_B = NA_REAL,
+         double abc_C = NA_REAL)
 {
   if (data.empty()) {
     stop("'data' must contain at least one observation.");
@@ -352,15 +502,44 @@ List SVP(std::vector<double> data,
     stop("'data' must contain only finite observations.");
   }
 
-  if (!std::isfinite(gamma) || gamma <= 0.0) {
+  const bool multiscale = subtests == "verzelen" ||
+    subtests == "both_msl" || subtests == "both_ms_refined" ||
+    subtests == "both_focus_lil" || subtests == "both_rmin" ||
+    subtests == "both_calibrated" ||
+    subtests == "both_correction" || subtests == "both_empirical" ||
+    subtests == "both_lengthonly" || subtests == "both_mosum_sqrt" ||
+    subtests == "both_mosum_adaptive";
+  if (!std::isfinite(gamma) || (!multiscale && gamma <= 0.0)) {
+    if (multiscale)
+      stop("gamma must be finite");
     stop("gamma must be finite and positive");
   }
 
   const TestKind test_kind = parse_test_kind(test);
   const CostKind cost_kind = parse_cost_kind(cost);
 
-  if (subtests != "both" && subtests != "right" && subtests != "none") {
-    stop("'subtests' must be one of 'both', 'right', or 'none'.");
+  if (subtests != "both" && subtests != "right" && subtests != "none" &&
+      subtests != "verzelen" && subtests != "both_msl" &&
+      subtests != "both_ms_refined" && subtests != "both_focus_lil" &&
+      subtests != "both_rmin" &&
+      subtests != "both_calibrated" && subtests != "both_correction" &&
+      subtests != "both_empirical" && subtests != "both_lengthonly" &&
+      subtests != "both_mosum_sqrt" && subtests != "both_mosum" &&
+      subtests != "both_mosum_adaptive") {
+    stop("'subtests' must be one of 'both', 'right', 'none', 'verzelen', 'both_msl', 'both_ms_refined', 'both_focus_lil', 'both_rmin', 'both_calibrated', 'both_correction', 'both_empirical', 'both_lengthonly', 'both_mosum_sqrt', 'both_mosum', or 'both_mosum_adaptive'.");
+  }
+  if (multiscale) {
+    if (test_kind != TestKind::GaussianMean)
+      stop("multiscale subtests require test = 'gaussian_mean'");
+    if (!std::isfinite(sigma2) || sigma2 <= 0.0)
+      stop("sigma2 must be finite and positive");
+  }
+  if (subtests == "both_rmin" && r_min < 1) {
+    stop("r_min must be at least one");
+  }
+  if (subtests == "both_rmin" &&
+      (!std::isfinite(r_min_frac) || r_min_frac < 0.0 || r_min_frac >= 0.5)) {
+    stop("r_min_frac must be finite and in [0, 0.5)");
   }
 
   if ((test_kind == TestKind::Quantile ||
@@ -399,6 +578,53 @@ List SVP(std::vector<double> data,
 
   switch (test_kind) {
   case TestKind::GaussianMean:
+    if (subtests == "verzelen")
+      return svp_detail::svp_verzelen_impl(data, gamma, sigma2, segment_cost);
+    if (subtests == "both_correction")
+      return svp_detail::svp_consistency_sharp_impl(data, gamma, sigma2, segment_cost);
+    if (subtests == "both_empirical")
+      return svp_detail::svp_empirical_both_impl(data, gamma, sigma2, segment_cost);
+    if (subtests == "both_msl")
+      return svp_detail::svp_impl<GaussianMeanMSL>(
+        data, gamma, "both", segment_cost, sigma2
+      );
+    if (subtests == "both_ms_refined")
+      return svp_detail::svp_impl<GaussianMeanMSFamily>(
+        data, gamma, "both", segment_cost, sigma2, data.size(), 1.0, 0.5
+      );
+    if (subtests == "both_focus_lil")
+      return svp_detail::svp_impl<GaussianMeanFocusLIL>(
+        data, gamma, "both", segment_cost, sigma2
+      );
+    if (subtests == "both_rmin")
+      return svp_detail::svp_impl<GaussianMeanRMin>(
+        data, gamma, "both", segment_cost, sigma2,
+        static_cast<std::size_t>(r_min), r_min_frac
+      );
+    if (subtests == "both_calibrated")
+      return svp_detail::svp_impl<GaussianMeanBothCalibrated>(
+        data, gamma, "both", segment_cost, sigma2,
+        NumericVector::is_na(abc_A) ? GaussianMeanBothCalibrated::kDefaultA : abc_A,
+        NumericVector::is_na(abc_B) ? GaussianMeanBothCalibrated::kDefaultB : abc_B,
+        NumericVector::is_na(abc_C) ? GaussianMeanBothCalibrated::kDefaultC : abc_C
+      );
+    if (subtests == "both_lengthonly")
+      return svp_detail::svp_impl<GaussianMeanLengthOnly>(
+        data, gamma, "both", segment_cost, sigma2,
+        static_cast<double>(data.size())
+      );
+    if (subtests == "both_mosum_sqrt")
+      return svp_detail::svp_impl<GaussianMeanMosumSqrt>(
+        data, gamma, "both", segment_cost, sigma2
+      );
+    if (subtests == "both_mosum")
+      return svp_detail::svp_impl<GaussianMeanMosum>(
+        data, gamma, "both", segment_cost, sigma2
+      );
+    if (subtests == "both_mosum_adaptive")
+      return svp_detail::svp_impl<GaussianMeanMosumAdaptive>(
+        data, gamma, "both", segment_cost, sigma2
+      );
     return svp_detail::svp_impl<GaussianMean>(data, gamma, subtests,
                                               segment_cost);
   case TestKind::GammaRate:

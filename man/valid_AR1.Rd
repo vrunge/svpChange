@@ -26,8 +26,8 @@ valid_AR1(
   of squares. This is useful when the innovation scale is unknown.}
 }
 \value{
-\code{TRUE} if the AR(1) statistic is strictly below \code{gamma}; otherwise,
-\code{FALSE}.
+\code{TRUE} if the AR(1) statistic is less than or equal to \code{gamma};
+otherwise, \code{FALSE}.
 }
 \description{
 Tests whether a segment is valid under a conditional Gaussian AR(1)
@@ -37,7 +37,7 @@ single-mean-change statistic implemented in R.
 The function conditions on the first observation, transforms the remaining
 observations into AR(1) innovations, and scans change locations that leave at
 least two observations on each side. The
-statistic is one half of the Gaussian likelihood-ratio statistic, using the
+known-variance statistic is the full RSS reduction divided by \code{sigma2}, using the
 same convention as \code{\link{AR1_single_change}}. If \code{rho} is
 \code{NA}, the robust estimator requires at least three observations. The
 function can be passed to \code{\link{svp0}} directly when \code{rho} is fixed,
@@ -53,7 +53,7 @@ data <- ts_generator(
   chpts = 60, parameters = 0, sd_noise = 1,
   rho = 0.6, type = "gaussAR1"
 )
-valid_AR1(data, gamma = 10, rho = 0.6, sigma2 = 1)
+valid_AR1(data, gamma = 20, rho = 0.6, sigma2 = 1)
 }
 \seealso{
 \code{\link{AR1_single_change}}, \code{\link{svp0}}

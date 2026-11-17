@@ -11,21 +11,6 @@ source(file.path("simulations", "power_robust", "calibrate_robust.R"))
 
 ROBUST_ROOT <- file.path("simulations", "power_robust")
 
-format_robust_parameter <- function(x) {
-  trimws(formatC(x, format = "fg", digits = 6))
-}
-
-robust_method_labels <- function(calibration) {
-  selected <- calibration$selected
-  c(
-    "PELT", "RFPOP",
-    paste0("SVP MedianMood / right / alpha = ",
-           format_robust_parameter(selected$mood_alpha)),
-    paste0("SVP Wilcoxon / right / c = ",
-           format_robust_parameter(selected$wilcoxon_constant))
-  )
-}
-
 fit_robust_methods <- function(y, oracle_segments, calibration) {
   n <- length(y)
   selected <- calibration$selected
@@ -59,7 +44,7 @@ fit_robust_methods <- function(y, oracle_segments, calibration) {
 
 run_robust_power <- function(
     n = 1000L, jump_sizes = seq(0.1, 4, 0.1), reps = 100L,
-    workers = power_default_workers(), seed = 123L,
+    workers = power_default_workers(), seed = 6284915L,
     calibration = NULL) {
   if (is.null(calibration)) {
     calibration <- if (file.exists(file.path(

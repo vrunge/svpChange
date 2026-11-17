@@ -1,4 +1,4 @@
-## Calibrate Gaussian SVP constants to the PELT null false-positive rate.
+## Calibrate Gaussian SVP constants to a 1% null false-detection probability.
 
 library(svpChange)
 library(changepoint)
@@ -10,8 +10,9 @@ GAUSSIAN_CALIBRATION_ROOT <- file.path("simulations", "power_gaussian")
 GAUSSIAN_CALIBRATION_N <- 1000L
 GAUSSIAN_CALIBRATION_REPS <- 20000L
 GAUSSIAN_VALIDATION_REPS <- 10000L
-GAUSSIAN_CALIBRATION_SEED <- 810000L
-GAUSSIAN_VALIDATION_SEED <- 820000L
+GAUSSIAN_CALIBRATION_SEED <- 8100000L
+GAUSSIAN_VALIDATION_SEED <- 8200000L
+GAUSSIAN_FALSE_DETECTION_TARGET <- 0.01
 
 compile_gaussian_critical_values <- function() {
   include <- normalizePath("src", mustWork = TRUE)
@@ -47,12 +48,76 @@ simulate_gaussian_null <- function(n, seed) {
   )
 }
 
-pelt_has_false_positive <- function(y) {
+pelt_has_false_positive <- function(y, constant = 2) {
   fit <- changepoint::cpt.mean(
     y, method = "PELT", penalty = "Manual",
-    pen.value = 2 * log(length(y))
+    pen.value = constant * log(length(y))
   )
   length(changepoint::cpts(fit)) > 0L
+}
+
+evaluate_pelt_constants <- function(
+    constants, n, reps, seed, workers) {
+  rows <- calibration_lapply(constants, function(constant) {
+    false_positive <- vapply(seq_len(reps), function(i) {
+      y <- simulate_gaussian_null(n, seed + i)
+      pelt_has_false_positive(y, constant)
+    }, logical(1))
+    interval <- wilson_interval(sum(false_positive), reps)
+    data.frame(
+      constant = constant,
+      false_detection = mean(false_positive),
+      lower = interval[["lower"]],
+      upper = interval[["upper"]],
+      reps = reps,
+      n = n,
+      seed = seed,
+      stringsAsFactors = FALSE
+    )
+  }, workers)
+  do.call(rbind, rows)
+}
+
+select_pelt_constant <- function(
+    values, target = GAUSSIAN_FALSE_DETECTION_TARGET) {
+  gap <- abs(values$false_detection - target)
+  values[max(which(gap == min(gap))), , drop = FALSE]
+}
+
+run_gaussian_pelt_calibration <- function(
+    n = GAUSSIAN_CALIBRATION_N,
+    calibration_reps = GAUSSIAN_CALIBRATION_REPS,
+    validation_reps = GAUSSIAN_VALIDATION_REPS,
+    calibration_seed = GAUSSIAN_CALIBRATION_SEED,
+    validation_seed = GAUSSIAN_VALIDATION_SEED,
+    constants = seq(2.00, 2.35, 0.005),
+    workers = gaussian_calibration_workers()) {
+  calibration <- evaluate_pelt_constants(
+    constants, n, calibration_reps, calibration_seed, workers
+  )
+  selected <- select_pelt_constant(calibration)
+  validation <- rbind(
+    evaluate_pelt_constants(
+      selected$constant, n, validation_reps, validation_seed, workers
+    ),
+    evaluate_pelt_constants(
+      2, n, validation_reps, validation_seed, workers
+    )
+  )
+  calibration$stage <- "calibration"
+  calibration$selected <- calibration$constant == selected$constant
+  calibration$reference <- FALSE
+  validation$stage <- "validation"
+  validation$selected <- FALSE
+  validation$reference <- validation$constant == 2
+  validation$target <- GAUSSIAN_FALSE_DETECTION_TARGET
+  calibration$target <- GAUSSIAN_FALSE_DETECTION_TARGET
+  output <- rbind(calibration, validation)
+  dir.create(dirname(GAUSSIAN_PELT_CALIBRATION_FILE), recursive = TRUE,
+             showWarnings = FALSE)
+  saveRDS(output, sub("\\.csv$", ".rds", GAUSSIAN_PELT_CALIBRATION_FILE))
+  utils::write.csv(output, GAUSSIAN_PELT_CALIBRATION_FILE, row.names = FALSE)
+  output
 }
 
 run_critical_sample <- function(n, reps, seed, workers) {
@@ -80,27 +145,29 @@ wilson_interval <- function(successes, trials, level = 0.95) {
   c(lower = max(0, center - half_width), upper = min(1, center + half_width))
 }
 
-select_mode_constants <- function(values, n, step = 0.001) {
-  target <- mean(values$pelt_false_positive)
+select_mode_constants <- function(
+    values, n, target = GAUSSIAN_FALSE_DETECTION_TARGET, step = 0.002) {
+  pelt_fpr <- mean(values$pelt_false_positive)
   modes <- c("none", "right", "both")
   do.call(rbind, lapply(modes, function(mode) {
     ratios <- values[[mode]] / log(n)
     centre <- stats::quantile(ratios, probs = 1 - target, type = 1,
                               names = FALSE)
     grid <- seq(
-      max(0.001, floor((centre - 0.05) / step) * step),
-      ceiling((centre + 0.05) / step) * step,
+      max(step, floor((centre - 0.1) / step) * step),
+      ceiling((centre + 0.1) / step) * step,
       by = step
     )
     fpr <- vapply(grid, function(constant) {
-      mean(values[[mode]] >= constant * log(n))
+      mean(values[[mode]] > constant * log(n))
     }, numeric(1))
     gap <- abs(fpr - target)
     chosen <- max(which(gap == min(gap)))
     data.frame(
       mode = mode,
       constant = grid[chosen],
-      pelt_fpr_calibration = target,
+      target_fpr = target,
+      pelt_fpr_calibration = pelt_fpr,
       svp_fpr_calibration = fpr[chosen],
       absolute_gap_calibration = gap[chosen],
       stringsAsFactors = FALSE
@@ -108,17 +175,19 @@ select_mode_constants <- function(values, n, step = 0.001) {
   }))
 }
 
-validate_mode_constants <- function(constants, values, n) {
-  target <- mean(values$pelt_false_positive)
+validate_mode_constants <- function(
+    constants, values, n, target = GAUSSIAN_FALSE_DETECTION_TARGET) {
+  pelt_fpr <- mean(values$pelt_false_positive)
   target_ci <- wilson_interval(sum(values$pelt_false_positive), nrow(values))
   rows <- lapply(seq_len(nrow(constants)), function(i) {
     mode <- constants$mode[i]
-    false_positive <- values[[mode]] >= constants$constant[i] * log(n)
+    false_positive <- values[[mode]] > constants$constant[i] * log(n)
     interval <- wilson_interval(sum(false_positive), length(false_positive))
     data.frame(
       mode = mode,
       constant = constants$constant[i],
-      pelt_fpr_validation = target,
+      target_fpr = target,
+      pelt_fpr_validation = pelt_fpr,
       pelt_fpr_lower = target_ci[["lower"]],
       pelt_fpr_upper = target_ci[["upper"]],
       svp_fpr_validation = mean(false_positive),
@@ -131,14 +200,14 @@ validate_mode_constants <- function(constants, values, n) {
   do.call(rbind, rows)
 }
 
-verify_critical_values <- function(constants, seed = 830000L, reps = 100L) {
+verify_critical_values <- function(constants, seed = 8300000L, reps = 100L) {
   for (i in seq_len(reps)) {
     y <- simulate_gaussian_null(80L, seed + i)
     critical <- gaussian_critical_values_cpp(y)
     for (mode in constants$mode) {
       for (gamma in c(0.95, 1.05) * critical[[mode]] + 1e-8) {
         fit <- SVP(y, gamma, "gaussian_mean", subtests = mode)
-        expected_one_segment <- critical[[mode]] < gamma
+        expected_one_segment <- critical[[mode]] <= gamma
         if (identical(length(fit$changepoints) == 1L, expected_one_segment)) next
         stop("Critical-value verification failed for mode ", mode)
       }
@@ -161,7 +230,10 @@ run_gaussian_mode_calibration <- function(
     n, validation_reps, GAUSSIAN_VALIDATION_SEED, workers
   )
   validation <- validate_mode_constants(constants, validation_values, n)
-  output <- merge(constants, validation, by = c("mode", "constant"), sort = FALSE)
+  output <- merge(
+    constants, validation,
+    by = c("mode", "constant", "target_fpr"), sort = FALSE
+  )
   output <- output[match(c("none", "right", "both"), output$mode), ]
   output$n <- n
   output$calibration_reps <- calibration_reps
@@ -182,4 +254,5 @@ run_gaussian_mode_calibration <- function(
 
 if (identical(tolower(Sys.getenv("SVP_RUN_GAUSSIAN_CALIBRATION")), "true")) {
   print(run_gaussian_mode_calibration())
+  print(run_gaussian_pelt_calibration())
 }

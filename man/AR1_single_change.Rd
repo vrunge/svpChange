@@ -30,6 +30,8 @@ validity indicator.
 Computes the conditional fixed-\code{rho} likelihood-ratio scan for a change
 in the marginal mean of an AR(1) process, conditional on the first observation.
 The residual crossing the candidate change uses both segment means.
+With known innovation variance, the statistic is the full RSS reduction
+divided by \code{sigma2}.
 }
 \references{
 Chakar, S., Lebarbier, E., Levy-Leduc, C. and Robin, S. (2017).
@@ -42,5 +44,5 @@ data <- ts_generator(
   chpts = c(30, 60), parameters = c(0, 2), sd_noise = 1,
   rho = 0.6, type = "gaussAR1"
 )
-AR1_single_change(data, gamma = 10, rho = 0.6, sigma2 = 1)
+AR1_single_change(data, gamma = 20, rho = 0.6, sigma2 = 1)
 }

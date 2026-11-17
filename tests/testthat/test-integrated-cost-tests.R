@@ -55,7 +55,7 @@ test_that("rank cost tests retain exact tie handling", {
       )
       best <- max(best, abs(sum(score)))
     }
-    best < gamma
+    best <= gamma
   }
 
   mood_valid <- function(x, gamma) {
@@ -83,7 +83,7 @@ test_that("rank cost tests retain exact tie handling", {
         )
       }
     }
-    best < gamma
+    best <= gamma
   }
 
   set.seed(1)

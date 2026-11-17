@@ -1,6 +1,16 @@
 library(testthat)
 library(svpChange)
 
+test_that("Gaussian validity uses the full RSS reduction", {
+  # Splitting (0, 2) reduces RSS from 2 to 0. A segment is valid when its
+  # statistic is at most gamma, so equality is valid.
+  expect_true(valid_FOCUS_last(c(0, 2), gamma = 2))
+  expect_false(valid_FOCUS_last(c(0, 2), gamma = 1.99))
+  expect_equal(SVP(c(0, 2), gamma = 2, subtests = "none")$changepoints, 2)
+  expect_equal(SVP(c(0, 2), gamma = 1.99, subtests = "none")$changepoints,
+               c(1, 2))
+})
+
 ########## test svp0 result = SVP result with right pruning ##########
 ########## test svp0 result = SVP result with right pruning ##########
 ########## test svp0 result = SVP result with right pruning ##########
@@ -14,7 +24,7 @@ test_that("svp0 and SVP agree with right pruning", {
     parameters = c(0, gap, 0, gap, 0, gap, 0, gap, 0),
     sd_noise = 1
   )
-  gamma <- 5
+  gamma <- 10
 
   res_svp0 <- svp0(data,
     gamma,
@@ -43,7 +53,7 @@ test_that("svp0 and SVP return the same Gaussian FOCUS result", {
     parameters = c(0, gap, 0, gap, 0, gap, 0, gap, 0),
     sd_noise = 1
   )
-  gamma <- 7
+  gamma <- 14
 
   res_svp0 <- svp0(data,
     gamma,
@@ -68,7 +78,7 @@ test_that("SVP accepts the three pruning modes", {
     chpts = c(20, 40, 60, 80), parameters = c(0, 1, -0.5, 0.8),
     sd_noise = 1, type = "gauss"
   )
-  gamma <- 2 * log(n)
+  gamma <- 4 * log(n)
 
   opts <- data.frame(subtests = c("none", "right", "both"))
 
@@ -87,7 +97,7 @@ test_that("SVP accepts the three pruning modes", {
 test_that("SVP evaluates Gaussian FOCUS at the current endpoint", {
   data <- c(2.002482730292829, 0.066700870930183,
             1.866851844706863)
-  gamma <- 0.4873983399942518
+  gamma <- 2 * 0.4873983399942518
 
   expect_false(valid_FOCUS(data, gamma))
   expect_true(valid_FOCUS_last(data, gamma))
@@ -118,7 +128,7 @@ test_that("both pruning applies the inclusive left rule", {
   data <- c(0, 1, -1)
   result <- SVP(
     data,
-    gamma = 7 / 8,
+    gamma = 7 / 4,
     test = "gaussian_mean",
     subtests = "both"
   )
@@ -133,7 +143,7 @@ test_that("both reverse scan preserves the smallest-boundary tie rule", {
   # The ascending cost pass must retain boundary 2 under the strict SSE tie.
   result <- SVP(
     c(-2, 0, -1, -2),
-    gamma = 0.3,
+    gamma = 0.6,
     test = "gaussian_mean",
     subtests = "both"
   )
@@ -148,7 +158,7 @@ test_that("SVP matches svp0 for equivalent pruning modes", {
     chpts = c(20, 40, 60), parameters = c(0, 2, -1),
     sd_noise = 1, type = "gauss"
   )
-  gamma <- 1.5
+  gamma <- 3
 
   # The compiled Gaussian state and the R validity wrapper can take different
   # floating-point paths. Inclusive-left deletion can amplify a borderline
@@ -196,7 +206,7 @@ test_that("SVP computes stable squared-error costs for large offsets", {
 test_that("Gaussian SVP is translation invariant under every pruning mode", {
   set.seed(2718)
   data <- rnorm(48)
-  gamma <- 2 * log(length(data))
+  gamma <- 4 * log(length(data))
 
   for (mode in c("none", "right", "both")) {
     reference <- SVP(
@@ -218,7 +228,7 @@ test_that("SVP defaults to Gaussian mean with both pruning rules", {
   data <- ts_generator(
     chpts = 80, parameters = 0, sd_noise = 1, type = "gauss"
   )
-  gamma <- 1.5 * log(length(data))
+  gamma <- 3 * log(length(data))
 
   default <- SVP(data, gamma)
   explicit <- SVP(data, gamma, test = "gaussian_mean")
@@ -238,7 +248,7 @@ test_that("both Gaussian pruning returns a valid final endpoint", {
   data <- ts_generator(
     chpts = n, parameters = 0, sd_noise = 1, type = "gauss"
   )
-  gamma <- 0.3
+  gamma <- 0.6
 
   forward <- SVP(
     data,

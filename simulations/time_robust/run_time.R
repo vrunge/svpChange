@@ -11,6 +11,16 @@ source(file.path("simulations", "power_robust", "calibrate_robust.R"))
 
 ROBUST_TIME_ROOT <- file.path("simulations", "time_robust")
 ROBUST_TIME_MAX_N <- 4000L
+
+read_robust_time_calibration <- function() {
+  calibration <- readRDS(file.path(
+    "simulations", "power_robust", "robust_calibration.rds"
+  ))
+  timing <- utils::read.csv(file.path(ROBUST_TIME_ROOT, "calibration.csv"))
+  calibration$selected$mood_alpha <- timing$mood_alpha[[1L]]
+  calibration$selected$wilcoxon_constant <- timing$wilcoxon_constant[[1L]]
+  calibration
+}
 format_robust_time_parameter <- function(x) {
   trimws(formatC(x, digits = 6L, format = "fg"))
 }
@@ -80,9 +90,7 @@ run_time_robust <- function(
     seed = 910L,
     min_batch_time = 0.05,
     randomize_method_order = FALSE,
-    calibration = readRDS(file.path(
-      "simulations", "power_robust", "robust_calibration.rds"
-    ))) {
+    calibration = read_robust_time_calibration()) {
   if (any(n_values > ROBUST_TIME_MAX_N) || fixed_n > ROBUST_TIME_MAX_N) {
     stop("the robust time study is limited to n <= ", ROBUST_TIME_MAX_N)
   }
@@ -106,9 +114,7 @@ run_time_robust <- function(
 }
 
 run_and_save_time_robust <- function(
-    workers = 1L, calibration = readRDS(file.path(
-      "simulations", "power_robust", "robust_calibration.rds"
-    ))) {
+    workers = 1L, calibration = read_robust_time_calibration()) {
   started <- proc.time()[["elapsed"]]
   results <- run_time_robust(calibration = calibration)
   run_elapsed <- proc.time()[["elapsed"]] - started
@@ -122,7 +128,7 @@ run_and_save_time_robust <- function(
     results,
     root = ROBUST_TIME_ROOT,
     paper_root = normalizePath(
-      file.path("..", "SVP_NEW_Figures2"), mustWork = FALSE
+      file.path("simulations", "all_plots"), mustWork = FALSE
     ),
     prefix = "robust_time",
     paper_prefix = "2_robust",

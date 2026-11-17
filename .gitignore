@@ -19,3 +19,6 @@ tests/testthat/Rplots.pdf
 /simulations/z_robust/
 /simulations/z_subtests/
 /simulations/tmp/
+
+# Raw calibration trajectories, too large for GitHub (>100 MB).
+/simulations/power_gaussian/empirical_both_trajectories*.rds

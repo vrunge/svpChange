@@ -42,6 +42,6 @@ List AR1_single_change(std::vector<double> data,
     _["rss0"] = test.rss0(),
     _["rss1"] = test.rss1(),
     _["changepoint"] = changepoint > 0 ? changepoint : NA_INTEGER,
-    _["valid"] = statistic < gamma
+    _["valid"] = statistic <= gamma
   );
 }
