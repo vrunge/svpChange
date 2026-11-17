@@ -395,6 +395,12 @@ TestKind parse_test_kind(const std::string& test)
 //'   length, combined with `r_min` by taking the larger of the two floors.
 //'   Zero (default) disables the relative floor. Ignored by every other
 //'   `subtests` value.
+//' @param abc_A,abc_B,abc_C Coefficients of the length-dependent penalty
+//'   `abc_A * log(m) + abc_B * log(log(m)) + abc_C` subtracted from the
+//'   Gaussian statistic of a candidate segment of length `m` when
+//'   `subtests = "both_calibrated"`. `NA` (default) uses the built-in
+//'   calibrated values 1.682969, 6.208626 and 4.939248. Ignored by every
+//'   other `subtests` value.
 //'
 //' @return A list with "changepoints" (the inclusive end of every segment,
 //'   including "length(data)"), "lastIndexSet" (zero-based candidate boundaries

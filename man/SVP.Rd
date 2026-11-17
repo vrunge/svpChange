@@ -12,7 +12,12 @@ SVP(
   rho = NA_real_,
   profile_sigma = FALSE,
   quantile = 0.01,
-  cost = "auto"
+  cost = "auto",
+  r_min = 1L,
+  r_min_frac = 0,
+  abc_A = NA_real_,
+  abc_B = NA_real_,
+  abc_C = NA_real_
 )
 }
 \arguments{
@@ -20,25 +25,32 @@ SVP(
 non-finite values are not supported.}
 
 \item{gamma}{Finite scalar validity threshold, positive except when
-\code{subtests = "verzelen"}, \code{subtests = "both_msl"},
-\code{subtests = "both_ms_refined"}, or \code{subtests = "both_focus_lil"}.
-Larger values
-generally accept longer or less homogeneous segments.}
+\code{subtests} is \code{"verzelen"}, \code{"both_msl"},
+\code{"both_ms_refined"}, \code{"both_focus_lil"}, \code{"both_rmin"},
+\code{"both_calibrated"}, \code{"both_correction"}, \code{"both_empirical"},
+\code{"both_lengthonly"}, \code{"both_mosum_sqrt"}, or
+\code{"both_mosum_adaptive"}. A segment is valid when its statistic is less
+than or equal to \code{gamma}. Larger values generally accept longer or less
+homogeneous segments.}
 
 \item{test}{Character scalar selecting a validity test; see Details. Defaults
 to \code{"gaussian_mean"}.}
 
 \item{subtests}{Character scalar selecting the validity-pruning rules:
 \code{"both"} (default), \code{"right"}, \code{"none"},
-\code{"verzelen"}, \code{"both_msl"}, \code{"both_ms_refined"}, or
-\code{"both_focus_lil"}. The last four options select multiscale Gaussian
-tests described in Details.}
+\code{"verzelen"}, \code{"both_msl"}, \code{"both_ms_refined"},
+\code{"both_focus_lil"}, \code{"both_rmin"}, \code{"both_calibrated"},
+\code{"both_correction"}, \code{"both_empirical"}, \code{"both_lengthonly"},
+\code{"both_mosum_sqrt"}, \code{"both_mosum"}, or
+\code{"both_mosum_adaptive"}. All options after \code{"none"} require
+\code{test = "gaussian_mean"} and select multiscale,
+minimum-arm-restricted, length-adaptive, or moving-sum (MOSUM) Gaussian
+tests; see Details. \code{"both_empirical"} requires data of length 1000.}
 
 \item{sigma2}{Positive finite innovation variance for fixed-variance AR1
 tests (\code{"AR1"} with \code{profile_sigma = FALSE}, and
-\code{"AR1Focus"}), or known observation noise variance for
-\code{subtests = "verzelen"}, \code{subtests = "both_msl"},
-\code{subtests = "both_ms_refined"}, or \code{subtests = "both_focus_lil"}
+\code{"AR1Focus"}), or known observation noise variance for the multiscale
+Gaussian \code{subtests} options (every option after \code{"none"})
 (default 1). For AR(1), it is the variance of the new
 shock, not the marginal variance of the observed series. It is ignored by
 \code{"AR1Profile"} and by \code{"AR1"} when
@@ -63,6 +75,22 @@ partitions with the same number of segments: \code{"auto"} (default),
 \code{"gaussian"}, or \code{"ar1"}. See Details. \code{"ar1"} uses
 \code{rho}, estimating it from the full series with \code{AR1_rho()} when it
 is \code{NA}.}
+
+\item{r_min}{Positive integer absolute minimum arm length for
+\code{subtests = "both_rmin"}. Ignored by every other \code{subtests} value.}
+
+\item{r_min_frac}{Finite scalar in \code{[0, 0.5)}, the minimum arm length for
+\code{subtests = "both_rmin"} as a fraction of the interval's current length,
+combined with \code{r_min} by taking the larger of the two floors. Zero
+(default) disables the relative floor. Ignored by every other
+\code{subtests} value.}
+
+\item{abc_A, abc_B, abc_C}{Coefficients of the length-dependent penalty
+\code{abc_A * log(m) + abc_B * log(log(m)) + abc_C} subtracted from the
+Gaussian statistic of a candidate segment of length \code{m} when
+\code{subtests = "both_calibrated"}. \code{NA} (default) uses the built-in
+calibrated values 1.682969, 6.208626 and 4.939248. Ignored by every other
+\code{subtests} value.}
 }
 \value{
 A list containing:
@@ -165,7 +193,7 @@ where \eqn{Z_l} is the unstandardized two-sample CUSUM. FOCUS computes
 This statistic is no larger than the position-penalized statistic in Eq. (12)
 and Proposition 2 of Verzelen, Fromont, Lerasle and Reynaud-Bouret (2023),
 \emph{Annals of Statistics} 51, 1586--1610,
-\url{https://doi.org/10.1214/23-AOS2297}, taking their permitted \eqn{L=2}.
+\doi{10.1214/23-AOS2297}, taking their permitted \eqn{L=2}.
 Consequently their single-interval level guarantee applies to this test.
 A candidate segment is valid when every contained interval has statistic
 no greater than \code{gamma}. The proposition does not directly cover the
